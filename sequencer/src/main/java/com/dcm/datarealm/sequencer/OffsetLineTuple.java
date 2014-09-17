@@ -8,17 +8,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
-public class OffsetTextTuple implements Writable
+public class OffsetLineTuple implements Writable
 {
 	private long offset;
 	private String line;
 	
-	public OffsetTextTuple()
+	public OffsetLineTuple()
 	{
 		
 	}
 	
-	public OffsetTextTuple(long offset, String line)
+	public OffsetLineTuple(long offset, String line)
 	{
 		this.offset = offset;
 		this.line = line;

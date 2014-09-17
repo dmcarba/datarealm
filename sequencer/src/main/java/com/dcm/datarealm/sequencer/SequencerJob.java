@@ -39,10 +39,10 @@ public class SequencerJob extends Configured implements Tool
 {
 
 	public static class SequencerMap extends
-			Mapper<LongWritable, Text, SplitOffsetTuple, OffsetTextTuple>
+			Mapper<LongWritable, Text, SplitOffsetTuple, OffsetLineTuple>
 	{
 		private SplitOffsetTuple currentSplitOffset;
-		private OffsetTextTuple currentOffsetText;
+		private OffsetLineTuple currentOffsetText;
 		private int totalSplitCount;
 		private int splitId;
 		private long lineCount;
@@ -71,7 +71,7 @@ public class SequencerJob extends Configured implements Tool
 			totalSplitCount = ((SequencerFileSplit) context.getInputSplit()).getTotalSplits();
 			splitId = ((SequencerFileSplit) context.getInputSplit()).getSplitId();
 			currentSplitOffset = new SplitOffsetTuple(splitId, 0);
-			currentOffsetText = new OffsetTextTuple();
+			currentOffsetText = new OffsetLineTuple();
 		}
 
 		@Override
@@ -87,17 +87,17 @@ public class SequencerJob extends Configured implements Tool
 	}
 
 	public static class SequencerReducer extends
-			Reducer<SplitOffsetTuple, OffsetTextTuple, LongWritable, Text>
+			Reducer<SplitOffsetTuple, OffsetLineTuple, LongWritable, Text>
 	{
 		private LongWritable sequence = new LongWritable();
 		private Text line = new Text();
 
-		protected void reduce(SplitOffsetTuple key, Iterable<OffsetTextTuple> tuples,
+		protected void reduce(SplitOffsetTuple key, Iterable<OffsetLineTuple> tuples,
 				Context context) throws IOException, InterruptedException
 		{
-			Iterator<OffsetTextTuple> iterator = tuples.iterator();
+			Iterator<OffsetLineTuple> iterator = tuples.iterator();
 			long sequenceNumber = 0;
-			OffsetTextTuple tuple = iterator.next();
+			OffsetLineTuple tuple = iterator.next();
 			while (iterator.hasNext() && tuple.getOffset() < 0)
 			{
 				sequenceNumber += Long.valueOf(tuple.getLine());
@@ -118,14 +118,14 @@ public class SequencerJob extends Configured implements Tool
 		}
 	}
 
-	public static class SequencerPartitioner extends Partitioner<SplitOffsetTuple, OffsetTextTuple>
+	public static class SequencerPartitioner extends Partitioner<SplitOffsetTuple, OffsetLineTuple>
 			implements Configurable
 	{
 
 		private Configuration conf;
 
 		@Override
-		public int getPartition(SplitOffsetTuple key, OffsetTextTuple value, int numPartitions)
+		public int getPartition(SplitOffsetTuple key, OffsetLineTuple value, int numPartitions)
 		{
 			int totalSplits = conf.getInt("splitNumber", 0);
 			return ((key.getSplit() - 1) * numPartitions) / totalSplits;
@@ -254,7 +254,7 @@ public class SequencerJob extends Configured implements Tool
 		job.setInputFormatClass(SequencerInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
 		job.setMapOutputKeyClass(SplitOffsetTuple.class);
-		job.setMapOutputValueClass(OffsetTextTuple.class);
+		job.setMapOutputValueClass(OffsetLineTuple.class);
 		job.setOutputKeyClass(Long.class);
 		job.setOutputValueClass(Text.class);
 		job.setMapperClass(SequencerMap.class);
