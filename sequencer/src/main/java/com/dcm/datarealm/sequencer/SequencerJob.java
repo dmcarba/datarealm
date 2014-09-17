@@ -31,18 +31,16 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-/**
- * Simple example job that writes the same records that reads but sorted (input
- * must be text)
- */
 public class SequencerJob extends Configured implements Tool
 {
 
+	private static final String TOTAL_SPLIT_NUMBER = "totalSplitNumber";
+
 	public static class SequencerMap extends
-			Mapper<LongWritable, Text, SplitOffsetTuple, OffsetLineTuple>
+			Mapper<LongWritable, Text, SplitSequenceTuple, SequenceLineTuple>
 	{
-		private SplitOffsetTuple currentSplitOffset;
-		private OffsetLineTuple currentOffsetText;
+		private SplitSequenceTuple currentSplitSequence;
+		private SequenceLineTuple currentSequenceLine;
 		private int totalSplitCount;
 		private int splitId;
 		private long lineCount;
@@ -51,15 +49,13 @@ public class SequencerJob extends Configured implements Tool
 		protected void cleanup(Context context) throws IOException, InterruptedException
 		{
 			super.cleanup(context);
-			currentOffsetText.setLine(String.valueOf(lineCount));
-			System.out.println("Split: " + splitId);
-			System.out.println("Count: " + lineCount);
+			currentSequenceLine.setLine(String.valueOf(lineCount));
 			for (int i = splitId; i < totalSplitCount; i++)
 			{
-				currentSplitOffset.setSplit(i + 1);
-				currentSplitOffset.setOffset(-splitId);
-				currentOffsetText.setOffset(-splitId);
-				context.write(currentSplitOffset, currentOffsetText);
+				currentSplitSequence.setSplit(i + 1);
+				currentSplitSequence.setSequence(-splitId);
+				currentSequenceLine.setSequence(-splitId);
+				context.write(currentSplitSequence, currentSequenceLine);
 			}
 		}
 
@@ -70,35 +66,35 @@ public class SequencerJob extends Configured implements Tool
 			lineCount = 0;
 			totalSplitCount = ((SequencerFileSplit) context.getInputSplit()).getTotalSplits();
 			splitId = ((SequencerFileSplit) context.getInputSplit()).getSplitId();
-			currentSplitOffset = new SplitOffsetTuple(splitId, 0);
-			currentOffsetText = new OffsetLineTuple();
+			currentSplitSequence = new SplitSequenceTuple(splitId, 0);
+			currentSequenceLine = new SequenceLineTuple();
 		}
 
 		@Override
 		protected void map(LongWritable offset, Text line, Context context) throws IOException,
 				InterruptedException
 		{
-			currentSplitOffset.setOffset(lineCount);
-			currentOffsetText.setLine(line.toString());
-			currentOffsetText.setOffset(lineCount);
-			context.write(currentSplitOffset, currentOffsetText);
+			currentSplitSequence.setSequence(lineCount);
+			currentSequenceLine.setLine(line.toString());
+			currentSequenceLine.setSequence(lineCount);
+			context.write(currentSplitSequence, currentSequenceLine);
 			lineCount++;
 		};
 	}
 
 	public static class SequencerReducer extends
-			Reducer<SplitOffsetTuple, OffsetLineTuple, LongWritable, Text>
+			Reducer<SplitSequenceTuple, SequenceLineTuple, LongWritable, Text>
 	{
 		private LongWritable sequence = new LongWritable();
 		private Text line = new Text();
 
-		protected void reduce(SplitOffsetTuple key, Iterable<OffsetLineTuple> tuples,
+		protected void reduce(SplitSequenceTuple key, Iterable<SequenceLineTuple> tuples,
 				Context context) throws IOException, InterruptedException
 		{
-			Iterator<OffsetLineTuple> iterator = tuples.iterator();
+			Iterator<SequenceLineTuple> iterator = tuples.iterator();
 			long sequenceNumber = 0;
-			OffsetLineTuple tuple = iterator.next();
-			while (iterator.hasNext() && tuple.getOffset() < 0)
+			SequenceLineTuple tuple = iterator.next();
+			while (iterator.hasNext() && tuple.getSequence() < 0)
 			{
 				sequenceNumber += Long.valueOf(tuple.getLine());
 				tuple = iterator.next();
@@ -118,17 +114,17 @@ public class SequencerJob extends Configured implements Tool
 		}
 	}
 
-	public static class SequencerPartitioner extends Partitioner<SplitOffsetTuple, OffsetLineTuple>
+	public static class SequencerPartitioner extends Partitioner<SplitSequenceTuple, SequenceLineTuple>
 			implements Configurable
 	{
 
 		private Configuration conf;
-
+		private int totalSplitNumber;
+		
 		@Override
-		public int getPartition(SplitOffsetTuple key, OffsetLineTuple value, int numPartitions)
-		{
-			int totalSplits = conf.getInt("splitNumber", 0);
-			return ((key.getSplit() - 1) * numPartitions) / totalSplits;
+		public int getPartition(SplitSequenceTuple key, SequenceLineTuple value, int numPartitions)
+		{	
+			return ((key.getSplit() - 1) * numPartitions) / totalSplitNumber;
 		}
 
 		@Override
@@ -141,6 +137,7 @@ public class SequencerJob extends Configured implements Tool
 		public void setConf(Configuration conf)
 		{
 			this.conf = conf;
+			totalSplitNumber = conf.getInt(TOTAL_SPLIT_NUMBER, 0);
 		}
 	}
 
@@ -148,15 +145,15 @@ public class SequencerJob extends Configured implements Tool
 	{
 		protected SequencerGroupingComparator()
 		{
-			super(SplitOffsetTuple.class, true);
+			super(SplitSequenceTuple.class, true);
 		}
 
 		@SuppressWarnings("rawtypes")
 		@Override
 		public int compare(WritableComparable a, WritableComparable b)
 		{
-			SplitOffsetTuple key1 = (SplitOffsetTuple) a;
-			SplitOffsetTuple key2 = (SplitOffsetTuple) b;
+			SplitSequenceTuple key1 = (SplitSequenceTuple) a;
+			SplitSequenceTuple key2 = (SplitSequenceTuple) b;
 			return key1.getSplit() == key2.getSplit() ? 0 : (key1.getSplit() > key2.getSplit() ? 1
 					: -1);
 		}
@@ -253,8 +250,8 @@ public class SequencerJob extends Configured implements Tool
 		job.setJarByClass(SequencerJob.class);
 		job.setInputFormatClass(SequencerInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
-		job.setMapOutputKeyClass(SplitOffsetTuple.class);
-		job.setMapOutputValueClass(OffsetLineTuple.class);
+		job.setMapOutputKeyClass(SplitSequenceTuple.class);
+		job.setMapOutputValueClass(SequenceLineTuple.class);
 		job.setOutputKeyClass(Long.class);
 		job.setOutputValueClass(Text.class);
 		job.setMapperClass(SequencerMap.class);
@@ -264,7 +261,7 @@ public class SequencerJob extends Configured implements Tool
 		job.setNumReduceTasks(4);
 		FileInputFormat.addInputPath(job, new Path(input));
 		FileOutputFormat.setOutputPath(job, new Path(output));
-		job.getConfiguration().setInt("splitNumber", new TextInputFormat().getSplits(job).size());
+		job.getConfiguration().setInt(TOTAL_SPLIT_NUMBER, new TextInputFormat().getSplits(job).size());
 		job.waitForCompletion(true);
 		return 0;
 	}

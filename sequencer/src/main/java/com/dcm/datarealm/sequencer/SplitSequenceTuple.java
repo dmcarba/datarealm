@@ -8,33 +8,33 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
-public class SplitOffsetTuple implements WritableComparable<SplitOffsetTuple>
+public class SplitSequenceTuple implements WritableComparable<SplitSequenceTuple>
 {
 	private int split;
-	private long offset;
+	private long sequence;
 
-	public SplitOffsetTuple()
+	public SplitSequenceTuple()
 	{
 	}
 
-	public SplitOffsetTuple(int splitNumber, long offset)
+	public SplitSequenceTuple(int splitNumber, long sequence)
 	{
 		this.split = splitNumber;
-		this.offset = offset;
+		this.sequence = sequence;
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException
 	{
 		WritableUtils.writeVLong(out, split);
-		WritableUtils.writeVLong(out, offset);
+		WritableUtils.writeVLong(out, sequence);
 	}
 
 	@Override
 	public void readFields(DataInput in) throws IOException
 	{
 		split = WritableUtils.readVInt(in);
-		offset = WritableUtils.readVLong(in);
+		sequence = WritableUtils.readVLong(in);
 	}
 
 	public int getSplit()
@@ -47,14 +47,14 @@ public class SplitOffsetTuple implements WritableComparable<SplitOffsetTuple>
 		this.split = split;
 	}
 
-	public long getOffset()
+	public long getSequence()
 	{
-		return offset;
+		return sequence;
 	}
 
-	public void setOffset(long offset)
+	public void setSequence(long sequence)
 	{
-		this.offset = offset;
+		this.sequence = sequence;
 	}
 
 	@Override
@@ -62,7 +62,7 @@ public class SplitOffsetTuple implements WritableComparable<SplitOffsetTuple>
 	{
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + (int) (offset ^ (offset >>> 32));
+		result = prime * result + (int) (sequence ^ (sequence >>> 32));
 		result = prime * result + (int) (split ^ (split >>> 32));
 		return result;
 	}
@@ -70,17 +70,17 @@ public class SplitOffsetTuple implements WritableComparable<SplitOffsetTuple>
 	@Override
 	public boolean equals(Object obj)
 	{
-		if (!(obj instanceof SplitOffsetTuple))
+		if (!(obj instanceof SplitSequenceTuple))
 			return false;
-		SplitOffsetTuple other = (SplitOffsetTuple) obj;
-		return split == other.split && offset == other.offset;
+		SplitSequenceTuple other = (SplitSequenceTuple) obj;
+		return split == other.split && sequence == other.sequence;
 	}
 
 	@Override
-	public int compareTo(SplitOffsetTuple o)
+	public int compareTo(SplitSequenceTuple o)
 	{
 		int result = o.split == split ? 0 : (o.split < split ? 1 : -1);
-		result = (result == 0) ? (o.offset == offset ? 0 : (o.offset < offset ? 1 : -1)) : result;
+		result = (result == 0) ? (o.sequence == sequence ? 0 : (o.sequence < sequence ? 1 : -1)) : result;
 		return result;
 	}
 
@@ -89,7 +89,7 @@ public class SplitOffsetTuple implements WritableComparable<SplitOffsetTuple>
 
 		public Comparator()
 		{
-			super(SplitOffsetTuple.class);
+			super(SplitSequenceTuple.class);
 		}
 
 		@Override
@@ -121,7 +121,7 @@ public class SplitOffsetTuple implements WritableComparable<SplitOffsetTuple>
 
 	static
 	{
-		WritableComparator.define(SplitOffsetTuple.class, new Comparator());
+		WritableComparator.define(SplitSequenceTuple.class, new Comparator());
 	}
 
 }

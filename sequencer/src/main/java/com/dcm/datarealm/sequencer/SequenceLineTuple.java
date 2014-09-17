@@ -8,30 +8,30 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
-public class OffsetLineTuple implements Writable
+public class SequenceLineTuple implements Writable
 {
-	private long offset;
+	private long sequence;
 	private String line;
 	
-	public OffsetLineTuple()
+	public SequenceLineTuple()
 	{
 		
 	}
 	
-	public OffsetLineTuple(long offset, String line)
+	public SequenceLineTuple(long sequence, String line)
 	{
-		this.offset = offset;
+		this.sequence = sequence;
 		this.line = line;
 	}
 	
-	public long getOffset()
+	public long getSequence()
 	{
-		return offset;
+		return sequence;
 	}
 
-	public void setOffset(long offset)
+	public void setSequence(long sequence)
 	{
-		this.offset = offset;
+		this.sequence = sequence;
 	}
 
 	public String getLine()
@@ -47,14 +47,14 @@ public class OffsetLineTuple implements Writable
 	@Override
 	public void readFields(DataInput in) throws IOException
 	{
-		offset = WritableUtils.readVLong(in);
+		sequence = WritableUtils.readVLong(in);
 		line = Text.readString(in);
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException
 	{
-		WritableUtils.writeVLong(out, offset);
+		WritableUtils.writeVLong(out, sequence);
 		Text.writeString(out, line);
 	}
 
