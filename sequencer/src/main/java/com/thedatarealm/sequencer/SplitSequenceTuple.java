@@ -1,4 +1,4 @@
-package com.dcm.datarealm.sequencer;
+package com.thedatarealm.sequencer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
