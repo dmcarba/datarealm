@@ -88,26 +88,26 @@ public class SequencerJob extends Configured implements Tool
 		private LongWritable sequence = new LongWritable();
 		private Text line = new Text();
 
-		protected void reduce(SplitSequenceWritable key, Iterable<SequenceLineWritable> tuples,
+		protected void reduce(SplitSequenceWritable key, Iterable<SequenceLineWritable> values,
 				Context context) throws IOException, InterruptedException
 		{
-			Iterator<SequenceLineWritable> iterator = tuples.iterator();
+			Iterator<SequenceLineWritable> iterator = values.iterator();
 			long sequenceNumber = 0;
-			SequenceLineWritable tuple = iterator.next();
-			while (iterator.hasNext() && tuple.getSequence() < 0)
+			SequenceLineWritable value = iterator.next();
+			while (iterator.hasNext() && value.getSequence() < 0)
 			{
-				sequenceNumber += Long.valueOf(tuple.getLine());
-				tuple = iterator.next();
+				sequenceNumber += Long.valueOf(value.getLine());
+				value = iterator.next();
 			}
 			sequence.set(sequenceNumber);
-			line.set(tuple.getLine());
+			line.set(value.getLine());
 			context.write(sequence, line);
 			sequenceNumber++;
 			while (iterator.hasNext())
 			{
-				tuple = iterator.next();
+				value = iterator.next();
 				sequence.set(sequenceNumber);
-				line.set(tuple.getLine());
+				line.set(value.getLine());
 				context.write(sequence, line);
 				sequenceNumber++;
 			}
