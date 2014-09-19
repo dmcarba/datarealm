@@ -166,13 +166,12 @@ public class SequencerJob extends Configured implements Tool
 		public List<InputSplit> getSplits(JobContext arg0) throws IOException
 		{
 			List<InputSplit> splits = super.getSplits(arg0);
-			List<InputSplit> result = new ArrayList<InputSplit>();
 			int total = splits.size();
-			int counter = 0;
+			List<InputSplit> result = new ArrayList<InputSplit>(total);
+			int counter = 1;
 			for (InputSplit split : splits)
 			{
-				counter++;
-				result.add(new SequencerFileSplit((FileSplit) split, counter, total));
+				result.add(new SequencerFileSplit((FileSplit) split, counter++, total));
 			}
 			return result;
 		}
