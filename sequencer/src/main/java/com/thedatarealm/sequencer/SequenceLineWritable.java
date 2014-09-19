@@ -8,17 +8,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
-public class SequenceLineTuple implements Writable
+public class SequenceLineWritable implements Writable
 {
 	private long sequence;
 	private String line;
 	
-	public SequenceLineTuple()
+	public SequenceLineWritable()
 	{
 		
 	}
 	
-	public SequenceLineTuple(long sequence, String line)
+	public SequenceLineWritable(long sequence, String line)
 	{
 		this.sequence = sequence;
 		this.line = line;

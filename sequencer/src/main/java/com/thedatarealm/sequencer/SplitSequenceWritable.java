@@ -8,16 +8,16 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
-public class SplitSequenceTuple implements WritableComparable<SplitSequenceTuple>
+public class SplitSequenceWritable implements WritableComparable<SplitSequenceWritable>
 {
 	private int split;
 	private long sequence;
 
-	public SplitSequenceTuple()
+	public SplitSequenceWritable()
 	{
 	}
 
-	public SplitSequenceTuple(int splitNumber, long sequence)
+	public SplitSequenceWritable(int splitNumber, long sequence)
 	{
 		this.split = splitNumber;
 		this.sequence = sequence;
@@ -70,14 +70,14 @@ public class SplitSequenceTuple implements WritableComparable<SplitSequenceTuple
 	@Override
 	public boolean equals(Object obj)
 	{
-		if (!(obj instanceof SplitSequenceTuple))
+		if (!(obj instanceof SplitSequenceWritable))
 			return false;
-		SplitSequenceTuple other = (SplitSequenceTuple) obj;
+		SplitSequenceWritable other = (SplitSequenceWritable) obj;
 		return split == other.split && sequence == other.sequence;
 	}
 
 	@Override
-	public int compareTo(SplitSequenceTuple o)
+	public int compareTo(SplitSequenceWritable o)
 	{
 		int result = o.split == split ? 0 : (o.split < split ? 1 : -1);
 		result = (result == 0) ? (o.sequence == sequence ? 0 : (o.sequence < sequence ? 1 : -1)) : result;
@@ -89,7 +89,7 @@ public class SplitSequenceTuple implements WritableComparable<SplitSequenceTuple
 
 		public Comparator()
 		{
-			super(SplitSequenceTuple.class);
+			super(SplitSequenceWritable.class);
 		}
 
 		@Override
@@ -121,7 +121,7 @@ public class SplitSequenceTuple implements WritableComparable<SplitSequenceTuple
 
 	static
 	{
-		WritableComparator.define(SplitSequenceTuple.class, new Comparator());
+		WritableComparator.define(SplitSequenceWritable.class, new Comparator());
 	}
 
 }

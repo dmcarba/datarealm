@@ -37,10 +37,10 @@ public class SequencerJob extends Configured implements Tool
 	private static final String TOTAL_SPLIT_NUMBER = "totalSplitNumber";
 
 	public static class SequencerMap extends
-			Mapper<LongWritable, Text, SplitSequenceTuple, SequenceLineTuple>
+			Mapper<LongWritable, Text, SplitSequenceWritable, SequenceLineWritable>
 	{
-		private SplitSequenceTuple currentSplitSequence;
-		private SequenceLineTuple currentSequenceLine;
+		private SplitSequenceWritable currentSplitSequence;
+		private SequenceLineWritable currentSequenceLine;
 		private int totalSplitCount;
 		private int splitId;
 		private long lineCount;
@@ -66,8 +66,8 @@ public class SequencerJob extends Configured implements Tool
 			lineCount = 0;
 			totalSplitCount = ((SequencerFileSplit) context.getInputSplit()).getTotalSplits();
 			splitId = ((SequencerFileSplit) context.getInputSplit()).getSplitId();
-			currentSplitSequence = new SplitSequenceTuple(splitId, 0);
-			currentSequenceLine = new SequenceLineTuple();
+			currentSplitSequence = new SplitSequenceWritable(splitId, 0);
+			currentSequenceLine = new SequenceLineWritable();
 		}
 
 		@Override
@@ -83,17 +83,17 @@ public class SequencerJob extends Configured implements Tool
 	}
 
 	public static class SequencerReducer extends
-			Reducer<SplitSequenceTuple, SequenceLineTuple, LongWritable, Text>
+			Reducer<SplitSequenceWritable, SequenceLineWritable, LongWritable, Text>
 	{
 		private LongWritable sequence = new LongWritable();
 		private Text line = new Text();
 
-		protected void reduce(SplitSequenceTuple key, Iterable<SequenceLineTuple> tuples,
+		protected void reduce(SplitSequenceWritable key, Iterable<SequenceLineWritable> tuples,
 				Context context) throws IOException, InterruptedException
 		{
-			Iterator<SequenceLineTuple> iterator = tuples.iterator();
+			Iterator<SequenceLineWritable> iterator = tuples.iterator();
 			long sequenceNumber = 0;
-			SequenceLineTuple tuple = iterator.next();
+			SequenceLineWritable tuple = iterator.next();
 			while (iterator.hasNext() && tuple.getSequence() < 0)
 			{
 				sequenceNumber += Long.valueOf(tuple.getLine());
@@ -114,7 +114,7 @@ public class SequencerJob extends Configured implements Tool
 		}
 	}
 
-	public static class SequencerPartitioner extends Partitioner<SplitSequenceTuple, SequenceLineTuple>
+	public static class SequencerPartitioner extends Partitioner<SplitSequenceWritable, SequenceLineWritable>
 			implements Configurable
 	{
 
@@ -122,7 +122,7 @@ public class SequencerJob extends Configured implements Tool
 		private int totalSplitNumber;
 		
 		@Override
-		public int getPartition(SplitSequenceTuple key, SequenceLineTuple value, int numPartitions)
+		public int getPartition(SplitSequenceWritable key, SequenceLineWritable value, int numPartitions)
 		{	
 			return ((key.getSplit() - 1) * numPartitions) / totalSplitNumber;
 		}
@@ -145,15 +145,15 @@ public class SequencerJob extends Configured implements Tool
 	{
 		protected SequencerGroupingComparator()
 		{
-			super(SplitSequenceTuple.class, true);
+			super(SplitSequenceWritable.class, true);
 		}
 
 		@SuppressWarnings("rawtypes")
 		@Override
 		public int compare(WritableComparable a, WritableComparable b)
 		{
-			SplitSequenceTuple key1 = (SplitSequenceTuple) a;
-			SplitSequenceTuple key2 = (SplitSequenceTuple) b;
+			SplitSequenceWritable key1 = (SplitSequenceWritable) a;
+			SplitSequenceWritable key2 = (SplitSequenceWritable) b;
 			return key1.getSplit() == key2.getSplit() ? 0 : (key1.getSplit() > key2.getSplit() ? 1
 					: -1);
 		}
@@ -249,8 +249,8 @@ public class SequencerJob extends Configured implements Tool
 		job.setJarByClass(SequencerJob.class);
 		job.setInputFormatClass(SequencerInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
-		job.setMapOutputKeyClass(SplitSequenceTuple.class);
-		job.setMapOutputValueClass(SequenceLineTuple.class);
+		job.setMapOutputKeyClass(SplitSequenceWritable.class);
+		job.setMapOutputValueClass(SequenceLineWritable.class);
 		job.setOutputKeyClass(Long.class);
 		job.setOutputValueClass(Text.class);
 		job.setMapperClass(SequencerMap.class);
