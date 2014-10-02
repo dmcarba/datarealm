@@ -1,4 +1,3 @@
-
 package com.thedatarealm.sequencer;
 
 import java.io.DataInput;
@@ -43,6 +42,7 @@ public class SequencerJob extends Configured implements Tool
 		private SequenceLineWritable currentSequenceLine;
 		private int totalSplitCount;
 		private int splitId;
+		private static final int TOTAL_SEQUENCE_ID = -1;
 		private long lineCount;
 
 		@Override
@@ -50,11 +50,11 @@ public class SequencerJob extends Configured implements Tool
 		{
 			super.cleanup(context);
 			currentSequenceLine.setLine(String.valueOf(lineCount));
+			currentSplitSequence.setSequence(TOTAL_SEQUENCE_ID);
+			currentSequenceLine.setSequence(TOTAL_SEQUENCE_ID);
 			for (int i = splitId; i < totalSplitCount; i++)
 			{
 				currentSplitSequence.setSplit(i + 1);
-				currentSplitSequence.setSequence(-splitId);
-				currentSequenceLine.setSequence(-splitId);
 				context.write(currentSplitSequence, currentSequenceLine);
 			}
 		}
@@ -114,16 +114,17 @@ public class SequencerJob extends Configured implements Tool
 		}
 	}
 
-	public static class SequencerPartitioner extends Partitioner<SplitSequenceWritable, SequenceLineWritable>
-			implements Configurable
+	public static class SequencerPartitioner extends
+			Partitioner<SplitSequenceWritable, SequenceLineWritable> implements Configurable
 	{
 
 		private Configuration conf;
 		private int totalSplitNumber;
-		
+
 		@Override
-		public int getPartition(SplitSequenceWritable key, SequenceLineWritable value, int numPartitions)
-		{	
+		public int getPartition(SplitSequenceWritable key, SequenceLineWritable value,
+				int numPartitions)
+		{
 			return ((key.getSplit() - 1) * numPartitions) / totalSplitNumber;
 		}
 
@@ -260,7 +261,8 @@ public class SequencerJob extends Configured implements Tool
 		job.setNumReduceTasks(4);
 		FileInputFormat.addInputPath(job, new Path(input));
 		FileOutputFormat.setOutputPath(job, new Path(output));
-		job.getConfiguration().setInt(TOTAL_SPLIT_NUMBER, new TextInputFormat().getSplits(job).size());
+		job.getConfiguration().setInt(TOTAL_SPLIT_NUMBER,
+				new TextInputFormat().getSplits(job).size());
 		job.waitForCompletion(true);
 		return 0;
 	}
