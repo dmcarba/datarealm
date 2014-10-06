@@ -238,7 +238,7 @@ public class SequencerJob extends Configured implements Tool
 		if (args.length != 2)
 		{
 			System.out.println("Invalid number of arguments\n\n"
-					+ "Usage: sequencer <input_path> <output_path>\n\n");
+					+ "Usage: hadoop jar sequencer-0.1-job.jar <input_path> <output_path>\n\n");
 			return -1;
 		}
 		String input = args[0];
