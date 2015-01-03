@@ -58,7 +58,7 @@ public class MapReduceTest implements Serializable
 		CacheFactory.shutdown();
 	}
 
-	@Test
+
 	public void testWordCount()
 	{
 		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT,
@@ -116,6 +116,7 @@ public class MapReduceTest implements Serializable
 		System.out.println("count=" + count);
 	}
 
+	@Test
 	public void testWordCountWithCombiner()
 	{
 		Reducer<String, Long, String, Long> reducer;

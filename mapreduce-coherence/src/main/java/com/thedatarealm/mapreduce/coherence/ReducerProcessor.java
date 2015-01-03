@@ -1,36 +1,28 @@
 package com.thedatarealm.mapreduce.coherence;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import com.tangosol.net.BackingMapContext;
-import com.tangosol.net.BackingMapManagerContext;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.ExternalizableHelper;
-import com.tangosol.util.InvocableMap;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.MapIndex;
+import com.tangosol.util.extractor.KeyExtractor;
 import com.tangosol.util.processor.AbstractProcessor;
-import com.thedatarealm.mapreduce.coherence.MapReduce.DistributedKey;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Reducer;
 
 @SuppressWarnings("serial")
 public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProcessor
 {
 	@SuppressWarnings("rawtypes")
-	private Reducer reducer;
-	private String output;
-	private DistributedKey<K> currentKey, oldKey;
-	private List<V> currentValues = new ArrayList<V>();
+	protected Reducer reducer;
+	protected String output;
+	protected List<V> currentValues = new ArrayList<V>();
 
 	public ReducerProcessor(String output, Reducer<K, V, ?, ?> reducer)
 	{
@@ -38,15 +30,14 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 		this.output = output;
 	}
 
-	@SuppressWarnings(
-	{ "rawtypes", "unchecked" })
+	@SuppressWarnings("unchecked")
 	@Override
 	public Map processAll(Set arg0)
 	{
 		final BackingMapContext context = getContext(arg0);
-		final Set<Map.Entry<K, Set>> entries = getIndexedValues(context);
-		Map bMap = context.getBackingMap();
-		for (Map.Entry<K, Set> entry : entries)
+		final Set<Map.Entry<K, Set<Binary>>> entries = getIndexedValues(context);
+		Map<Binary, Binary> bMap = context.getBackingMap();
+		for (Map.Entry<K, Set<Binary>> entry : entries)
 		{
 			currentValues = new ArrayList<>();
 			for (Object o:entry.getValue())
@@ -54,21 +45,15 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 				currentValues.add((V) ExternalizableHelper.CONVERTER_FROM_BINARY.convert(bMap.get(o)));			
 			}
 			store(entry.getKey(), currentValues);
+			for (Object o:entry.getValue())
+			{
+				bMap.remove(o);			
+			}
 		}
 		return null;
 	}
-
-	private void store()
-	{
-		final List<OrderedKeyValue<K, V>> reducedPairs = reducer.reduce(oldKey.getAssociatedKey(),
-				currentValues);
-		for (OrderedKeyValue<K, V> pair : reducedPairs)
-		{
-			CacheFactory.getCache(output).put(pair.getKey(), pair.getValue());
-		}
-	}
 	
-	private void store(K key, List<V> values)
+	protected void store(K key, List<V> values)
 	{
 		final List<OrderedKeyValue<K, V>> reducedPairs = reducer.reduce(key,
 				values);
@@ -78,42 +63,26 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 		}
 	}
 
-	private static BackingMapContext getContext(Set set)
+	private BackingMapContext getContext(Set<BinaryEntry> set)
 	{
-		final Object entry = set.iterator().next();
-		if (!(entry instanceof BinaryEntry))
-		{
-			throw new UnsupportedOperationException("Only supports binary caches");
-		}
-
-		final BinaryEntry binaryEntry = (BinaryEntry) entry;
-		return binaryEntry.getBackingMapContext();
+		return set.iterator().next().getBackingMapContext();
 	}
 
-	private Set getIndexedValues(BackingMapContext context)
+	private Set<Map.Entry<K, Set<Binary>>> getIndexedValues(BackingMapContext context)
 	{
-		final MapIndex index = (MapIndex) context.getIndexMap().get(MapReduce.KEY_EXTRACTOR);
-		final Map contents = index.getIndexContents();
-		return contents == null ? Collections.emptySet() : contents.entrySet();
+		final MapIndex index = (MapIndex) context.getIndexMap().get(getKeyExtractor());
+		final Map<K,Set<Binary>> contents = index.getIndexContents();
+		return contents.entrySet();
 	}
 	
-	public void process(final V value)
+	protected KeyExtractor getKeyExtractor()
 	{
-		
+		return MapReduce.KEY_EXTRACTOR;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public Object process(final Entry paramEntry)
 	{
-		currentKey = (DistributedKey<K>) paramEntry.getKey();
-		if (oldKey != null && !currentKey.equals(oldKey))
-		{
-			store();
-			currentValues.clear();
-		}
-		currentValues.add((V) paramEntry.getValue());
-		oldKey = currentKey;
 		return null;
 	}
 }
