@@ -3,7 +3,7 @@ package com.thedatarealm.mapreduce.coherence;
 import java.io.Serializable;
 
 @SuppressWarnings("serial")
-public class OrderedKeyValue<K extends Comparable<K>, V> implements Serializable
+public class OrderedKeyValue<K extends Comparable<?>, V> implements Serializable
 {
 	private K key;
 	private V value;

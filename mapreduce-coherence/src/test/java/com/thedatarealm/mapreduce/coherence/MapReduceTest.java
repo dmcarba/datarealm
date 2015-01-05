@@ -42,7 +42,7 @@ public class MapReduceTest implements Serializable
 
 		NamedCache cache = CacheFactory.getCache(INPUT);
 		long j = 0;
-		for (long i = 0; i < 3; i++)
+		for (long i = 0; i < 1000; i++)
 		{
 			cache.put(j++, "How many");
 			cache.put(j++, "different words can");
@@ -62,17 +62,13 @@ public class MapReduceTest implements Serializable
 		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT,
 				new Mapper<Long, String, String, Long>()
 				{
-					List<OrderedKeyValue<String, Long>> result = new ArrayList<>();
-
 					@Override
-					public List<OrderedKeyValue<String, Long>> map(Long key, String value)
+					public void map(Long key, String value, MapContext<String, Long> context)
 					{
-						result.clear();
 						for (String word : value.split(" ", -1))
 						{
-							result.add(new OrderedKeyValue<String, Long>(word, 1L));
+							context.write(word, 1L);
 						}
-						return result;
 					}
 				}, new Reducer<String, Long, String, Long>()
 				{
@@ -121,17 +117,13 @@ public class MapReduceTest implements Serializable
 		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT,
 				new Mapper<Long, String, String, Long>()
 				{
-					List<OrderedKeyValue<String, Long>> result = new ArrayList<>();
-
 					@Override
-					public List<OrderedKeyValue<String, Long>> map(Long key, String value)
+					public void map(Long key, String value, MapContext<String, Long> context)
 					{
-						result.clear();
 						for (String word : value.split(" ", -1))
 						{
-							result.add(new OrderedKeyValue<String, Long>(word, 1L));
+							context.write(word, 1L);
 						}
-						return result;
 					}
 				}, reducer = new Reducer<String, Long, String, Long>()
 				{
