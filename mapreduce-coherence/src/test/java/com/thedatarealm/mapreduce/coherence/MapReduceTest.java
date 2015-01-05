@@ -1,7 +1,6 @@
 package com.thedatarealm.mapreduce.coherence;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,7 @@ public class MapReduceTest implements Serializable
 
 		NamedCache cache = CacheFactory.getCache(INPUT);
 		long j = 0;
-		for (long i = 0; i < 1000; i++)
+		for (long i = 0; i < 100000; i++)
 		{
 			cache.put(j++, "How many");
 			cache.put(j++, "different words can");
@@ -57,6 +56,7 @@ public class MapReduceTest implements Serializable
 		CacheFactory.shutdown();
 	}
 
+//	@Test
 	public void testWordCount()
 	{
 		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT,
@@ -72,19 +72,15 @@ public class MapReduceTest implements Serializable
 					}
 				}, new Reducer<String, Long, String, Long>()
 				{
-					List<OrderedKeyValue<String, Long>> result = new ArrayList<>();
-
 					@Override
-					public List<OrderedKeyValue<String, Long>> reduce(String key, List<Long> values)
+					public void reduce(String key, List<Long> values, MapContext<String, Long> context)
 					{
-						result.clear();
 						long total = 0;
 						for (Long value : values)
 						{
 							total += value;
 						}
-						result.add(new OrderedKeyValue<String, Long>(key, total));
-						return result;
+						context.write(key, total);
 					}
 				}).mapReduce();
 
@@ -127,19 +123,16 @@ public class MapReduceTest implements Serializable
 					}
 				}, reducer = new Reducer<String, Long, String, Long>()
 				{
-					List<OrderedKeyValue<String, Long>> result = new ArrayList<>();
 
 					@Override
-					public List<OrderedKeyValue<String, Long>> reduce(String key, List<Long> values)
+					public void reduce(String key, List<Long> values, MapContext<String, Long> context)
 					{
-						result.clear();
 						long total = 0;
 						for (Long value : values)
 						{
 							total += value;
 						}
-						result.add(new OrderedKeyValue<String, Long>(key, total));
-						return result;
+						context.write(key, total);
 					}
 				}, reducer).mapReduce();
 

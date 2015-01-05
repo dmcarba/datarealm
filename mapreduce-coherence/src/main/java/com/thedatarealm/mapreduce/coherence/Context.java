@@ -24,11 +24,10 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 	private int mapCount;
 	private boolean isCombinerPresent;
 	private Comparable<?> sourceKey;
-	private BackingMapContext bmctx;
+	private DistributedCacheService service;
 
 	public Context(BackingMapContext bmctx, String staging, String output, boolean isCombinerPresent)
 	{
-		this.bmctx = bmctx;
 		this.localMember = bmctx.getManagerContext().getCacheService().getCluster().getLocalMember();
 		this.memberId = localMember.getId();
 		this.staging = staging;
@@ -36,6 +35,7 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 		this.isCombinerPresent = isCombinerPresent;
 		this.values = new ArrayList<>();
 		this.keysToMembers = new HashMap<>();
+		this.service = (DistributedCacheService) bmctx.getManagerContext().getCacheService();
 	}
 
 	public void setSourceKey(Comparable<?> sourceKey)
@@ -80,8 +80,7 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 				keysToMembers.clear();
 			}
 			NodeAwareKey<K> nkey = new NodeAwareKey<K>(key, memberId, count++);
-			Member member = ((DistributedCacheService) bmctx.getManagerContext().getCacheService())
-					.getKeyOwner(nkey);
+			Member member = service.getKeyOwner(nkey);
 			if (!keysToMembers.containsKey(member))
 			{
 				keysToMembers.put(member, new ArrayList<OrderedKeyValue<NodeAwareKey<K>, V>>());

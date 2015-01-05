@@ -39,6 +39,10 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 	@Override
 	public Map processAll(Set arg0)
 	{
+		if (arg0.size() == 0)
+		{
+			return null;
+		}
 		this.context = new Context<>(((BinaryEntry) arg0.iterator().next()).getBackingMapContext(),
 				staging, output, combiner != null);
 		for (Iterator iter = arg0.iterator(); iter.hasNext();)
