@@ -26,7 +26,6 @@ public class MapReduceTest implements Serializable
 	private final static String STAGING = "STAGING_CACHE";
 	private final static String OUTPUT = "OUTPUT_CACHE";
 
-
 	@BeforeClass
 	public static void setCacheSystemProperties()
 	{
@@ -37,18 +36,18 @@ public class MapReduceTest implements Serializable
 	public void setUp()
 	{
 
-		ClusterMemberGroupUtils.newBuilder().setStorageEnabledCount(3)
-				.setLogLevel(3)
+		ClusterMemberGroupUtils.newBuilder().setStorageEnabledCount(3).setLogLevel(3)
 				.setFastStartJoinTimeoutMilliseconds(100)
 				.buildAndConfigureForStorageDisabledClient();
 
 		NamedCache cache = CacheFactory.getCache(INPUT);
-		for (long i = 1;i< 13;i++)
+		long j = 0;
+		for (long i = 0; i < 3; i++)
 		{
-		cache.put(i++, "How many");
-		cache.put(i++, "different words can");
-		cache.put(i++, "you count in");
-		cache.put(i++, "this text");
+			cache.put(j++, "How many");
+			cache.put(j++, "different words can");
+			cache.put(j++, "you count in");
+			cache.put(j++, "this text");
 		}
 	}
 
@@ -57,7 +56,6 @@ public class MapReduceTest implements Serializable
 	{
 		CacheFactory.shutdown();
 	}
-
 
 	public void testWordCount()
 	{
@@ -104,7 +102,7 @@ public class MapReduceTest implements Serializable
 			count++;
 		}
 		System.out.println("count=" + count);
-		
+
 		NamedCache outputCache = CacheFactory.getCache(OUTPUT);
 		count = 0;
 		for (Iterator iter = outputCache.entrySet().iterator(); iter.hasNext();)
@@ -154,16 +152,28 @@ public class MapReduceTest implements Serializable
 				}, reducer).mapReduce();
 
 		NamedCache stagingCache = CacheFactory.getCache(STAGING);
+		NamedCache inputCache = CacheFactory.getCache(INPUT);
 
 		int count = 0;
+		for (Iterator iter = inputCache.entrySet().iterator(); iter.hasNext();)
+		{
+			Map.Entry entry = (Map.Entry) iter.next();
+			// System.out.println("key=" + entry.getKey() + " value=" +
+			// entry.getValue());
+			count++;
+		}
+		System.out.println("input count=" + count);
+
+		count = 0;
 		for (Iterator iter = stagingCache.entrySet().iterator(); iter.hasNext();)
 		{
 			Map.Entry entry = (Map.Entry) iter.next();
-			System.out.println("key=" + entry.getKey() + " value=" + entry.getValue());
+			// System.out.println("key=" + entry.getKey() + " value=" +
+			// entry.getValue());
 			count++;
 		}
 		System.out.println("count=" + count);
-		
+
 		NamedCache outputCache = CacheFactory.getCache(OUTPUT);
 		count = 0;
 		for (Iterator iter = outputCache.entrySet().iterator(); iter.hasNext();)
@@ -173,25 +183,32 @@ public class MapReduceTest implements Serializable
 			count++;
 		}
 		System.out.println("count=" + count);
-		
+
 		System.out.println("------------------");
 		count = 0;
-		for (Iterator iter = stagingCache.entrySet(new EqualsFilter(new KeyExtractor("isDistributed"),false)).iterator(); iter.hasNext();)
+		for (Iterator iter = stagingCache.entrySet(
+				new EqualsFilter(new KeyExtractor("isDistributed"), false)).iterator(); iter
+				.hasNext();)
 		{
 			Map.Entry entry = (Map.Entry) iter.next();
-			System.out.println("key=" + entry.getKey() + " value=" + entry.getValue());
+			// System.out.println("key=" + entry.getKey() + " value=" +
+			// entry.getValue());
 			count++;
 		}
 		System.out.println("count=" + count);
 		System.out.println("------------------");
 		count = 0;
-		for (Iterator iter = stagingCache.entrySet(new EqualsFilter(new KeyExtractor("isDistributed"),true)).iterator(); iter.hasNext();)
+		for (Iterator iter = stagingCache.entrySet(
+				new EqualsFilter(new KeyExtractor("isDistributed"), true)).iterator(); iter
+				.hasNext();)
 		{
 			Map.Entry entry = (Map.Entry) iter.next();
-			System.out.println("key=" + entry.getKey() + " value=" + entry.getValue());
+			// System.out.println("key=" + entry.getKey() + " value=" +
+			// entry.getValue());
 			count++;
 		}
 		System.out.println("count=" + count);
-		
+
 	}
+
 }

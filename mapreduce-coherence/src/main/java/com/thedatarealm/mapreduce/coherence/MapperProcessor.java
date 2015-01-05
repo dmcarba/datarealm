@@ -16,7 +16,7 @@ import com.tangosol.util.InvocableMap;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.processor.AbstractProcessor;
 import com.thedatarealm.mapreduce.coherence.MapReduce.DistributedKey;
-import com.thedatarealm.mapreduce.coherence.MapReduce.LocalKey;
+import com.thedatarealm.mapreduce.coherence.MapReduce.CompositeKey;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Mapper;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Reducer;
 import com.thedatarealm.mapreduce.coherence.MapReduce.WriterService;
@@ -28,19 +28,20 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 	private Mapper mapper;
 	@SuppressWarnings("rawtypes")
 	private Reducer combiner;
-	private String staging;
+	private String staging, output;
 	private long count;
+	InvocationService writerService;
 
-	public MapperProcessor(String staging, Mapper<?, ?, K, V> mapper)
+	public MapperProcessor(String staging, String output, Mapper<?, ?, K, V> mapper)
 	{
 		this.staging = staging;
+		this.output = output;
 		this.mapper = mapper;
 	}
 
-	public MapperProcessor(String staging, Mapper<?, ?, K, V> mapper, Reducer<K, V, K, V> combiner)
+	public MapperProcessor(String staging, String output, Mapper<?, ?, K, V> mapper, Reducer<K, V, K, V> combiner)
 	{
-		this.staging = staging;
-		this.mapper = mapper;
+		this(staging, output, mapper);
 		this.combiner = combiner;
 	}
 
@@ -75,18 +76,19 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 
 	private void store(final List<OrderedKeyValue<K, V>> emittedPairs, Comparable<?> sourceKey)
 	{
-		List<OrderedKeyValue<LocalKey<? extends Comparable<?>, K>, V>> values = new ArrayList<>();
+		List<OrderedKeyValue<CompositeKey<? extends Comparable<?>, K>, V>> values = new ArrayList<>();
 		for (OrderedKeyValue<K, V> kv : emittedPairs)
 		{
 			@SuppressWarnings(
 			{ "unchecked", "rawtypes" })
-			LocalKey<? extends Comparable<?>, K> key = new LocalKey(sourceKey, kv.getKey(), count++);
-			values.add(new OrderedKeyValue<LocalKey<? extends Comparable<?>, K>, V>(key, kv
+			CompositeKey<? extends Comparable<?>, K> key = new CompositeKey(kv.getKey(), sourceKey, count++);
+			values.add(new OrderedKeyValue<CompositeKey<? extends Comparable<?>, K>, V>(key, kv
 					.getValue()));
 		}
+		//Write to local node
 		((InvocationService) CacheFactory.getService("Shuffle")).query(
-				new WriterService<LocalKey<? extends Comparable<?>, K>, V>(values, staging),
-				Collections.singleton(CacheFactory.getCache(staging).getCacheService().getCluster()
+				new WriterService<CompositeKey<? extends Comparable<?>, K>, V>(values, output),
+				Collections.singleton(CacheFactory.getCache(output).getCacheService().getCluster()
 						.getLocalMember()));
 	}
 

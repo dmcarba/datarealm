@@ -23,4 +23,12 @@ public class OrderedKeyValue<K extends Comparable<K>, V> implements Serializable
 	{
 		return value;
 	}
+
+	@Override
+	public String toString()
+	{
+		return "OrderedKeyValue [key=" + key + ", value=" + value + "]";
+	}
+	
+	
 }

@@ -2,15 +2,18 @@ package com.thedatarealm.mapreduce.coherence;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 import com.tangosol.net.AbstractInvocable;
 import com.tangosol.net.CacheFactory;
+import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
+import com.tangosol.net.PartitionedService;
 import com.tangosol.net.cache.KeyAssociation;
 import com.tangosol.util.Filter;
 import com.tangosol.util.extractor.KeyExtractor;
 import com.tangosol.util.filter.AlwaysFilter;
-import com.tangosol.util.filter.EqualsFilter;
+import com.tangosol.util.filter.KeyAssociatedFilter;
 
 public class MapReduce<K extends Comparable<K>, V>
 {
@@ -24,7 +27,7 @@ public class MapReduce<K extends Comparable<K>, V>
 	private Reducer combiner;
 
 	public static final KeyExtractor KEY_EXTRACTOR = new KeyExtractor("getKey");
-	public static final KeyExtractor KEY_EXTRACTOR2 = new KeyExtractor("getKey2");
+	public static final KeyExtractor KEY_EXTRACTOR2 = new KeyExtractor("getKey1");
 
 	public static interface Mapper<MKI extends Comparable<MKI>, MVI, K extends Comparable<K>, V>
 			extends Serializable
@@ -76,34 +79,33 @@ public class MapReduce<K extends Comparable<K>, V>
 			NamedCache cache = CacheFactory.getCache(targetCache);
 			for (OrderedKeyValue<K, V> entry : entryList)
 			{
+				if (entry.getKey() == null)
+				{
+					throw new RuntimeException("Null Key " + entry);
+				}
 				cache.put(entry.getKey(), entry.getValue());
 			}
 		}
 	}
 
-	private interface Distributed
-	{
-		public boolean isDistributed();
-	}
-
 	@SuppressWarnings("serial")
-	public static class LocalKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> implements
-			Distributed, KeyAssociation, Serializable, Comparable<LocalKey<K1, K2>>
+	public static class CompositeKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> implements
+			KeyAssociation, Serializable, Comparable<CompositeKey<K1, K2>>
 	{
 		private K1 key1;
 		private K2 key2;
 		long sequence;
 
-		public LocalKey()
+		public CompositeKey()
 		{
 		}
 
-		public LocalKey(K1 key1, K2 key2, long sequence)
+		public CompositeKey(K1 key1, K2 key2, long sequence)
 		{
 			this.key1 = key1;
 			this.key2 = key2;
 			this.sequence = sequence;
-		}	
+		}
 
 		public K1 getKey1()
 		{
@@ -116,21 +118,20 @@ public class MapReduce<K extends Comparable<K>, V>
 		}
 
 		@Override
-		public boolean isDistributed()
-		{
-			return false;
-		}
-
-		@Override
 		public Object getAssociatedKey()
 		{
-			return key1;
+			return key2;
+		}
+
+		public Object getKey()
+		{
+			return null;
 		}
 
 		@Override
-		public int compareTo(LocalKey<K1, K2> o)
+		public int compareTo(CompositeKey<K1, K2> o)
 		{
-			return key2.compareTo(o.key2);
+			return key1.compareTo(o.key1);
 		}
 
 		@Override
@@ -148,20 +149,20 @@ public class MapReduce<K extends Comparable<K>, V>
 		@Override
 		public boolean equals(Object obj)
 		{
-			return key2.equals(((LocalKey<K1,K2>) obj).key2);
+			return key1.equals(((CompositeKey<K1, K2>) obj).key1);
 		}
 
 		@Override
 		public String toString()
 		{
-			return "LocalKey [key1=" + key1 + ", key2=" + key2 + ", sequence=" + sequence + "]";
+			return "CompositeKey [key1=" + key1 + ", key2=" + key2 + ", sequence=" + sequence + "]";
 		}
-				
+
 	}
 
 	@SuppressWarnings("serial")
 	public static class DistributedKey<K extends Comparable<K>> implements
-			Comparable<DistributedKey<K>>, Distributed, KeyAssociation, Serializable
+			Comparable<DistributedKey<K>>, KeyAssociation, Serializable
 	{
 
 		private K key;
@@ -182,6 +183,11 @@ public class MapReduce<K extends Comparable<K>, V>
 		public K getKey()
 		{
 			return key;
+		}
+
+		public Object getKey2()
+		{
+			return null;
 		}
 
 		@Override
@@ -216,12 +222,6 @@ public class MapReduce<K extends Comparable<K>, V>
 		}
 
 		@Override
-		public boolean isDistributed()
-		{
-			return true;
-		}
-
-		@Override
 		public Object getAssociatedKey()
 		{
 			return key;
@@ -233,23 +233,47 @@ public class MapReduce<K extends Comparable<K>, V>
 	{
 		NamedCache inputCache = CacheFactory.getCache(input);
 
-		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<K, V>(staging, this.mapper,
+		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<K, V>(staging, output,this.mapper,
 				this.combiner));
 
 		NamedCache stagingCache = CacheFactory.getCache(staging);
-
+		NamedCache outputCache = CacheFactory.getCache(output);
+		
 		stagingCache.addIndex(KEY_EXTRACTOR, true, null);
-		stagingCache.addIndex(KEY_EXTRACTOR2, true, null);
+		outputCache.addIndex(KEY_EXTRACTOR2, true, null);
 
 		Filter filter = AlwaysFilter.INSTANCE;
 		if (this.combiner != null)
 		{
-			stagingCache.invokeAll(new EqualsFilter(new KeyExtractor("isDistributed"), false),
+			checkAssociation();
+			outputCache.invokeAll(filter,
 					new CombinerProcessor<K, V>(staging, this.combiner));
-			filter = new EqualsFilter(new KeyExtractor("isDistributed"), true);
+			outputCache.clear();
+			outputCache.removeIndex(KEY_EXTRACTOR2);
 		}
 
 		stagingCache.invokeAll(filter, new ReducerProcessor<K, V>(output, this.reducer));
 	}
 
+	private void checkAssociation()
+	{
+	    NamedCache inputCache = CacheFactory.getCache(input);
+	    NamedCache outputCache = CacheFactory.getCache(output);
+	    System.out.println("input Cache.size() = " + inputCache.size());
+	    PartitionedService ps1 = (PartitionedService) inputCache.getCacheService();
+	    Set<Long> inputKeySet = (Set<Long>) inputCache.keySet();
+	    for (Long key: inputKeySet)
+	    {
+	      Member member = ps1.getKeyOwner(key);
+	      System.out.println("Coherence member:" + member.getId() + "; input key:" + key );
+	      Filter filterAsc = new KeyAssociatedFilter(AlwaysFilter.INSTANCE, key);
+	      Set<CompositeKey> ONKeySet = (Set<CompositeKey>) outputCache.keySet(filterAsc);
+	      PartitionedService ps2 = (PartitionedService) outputCache.getCacheService();
+	      for (CompositeKey key1: ONKeySet)
+	      {
+	        Member member1 = ps2.getKeyOwner(key1);
+	        System.out.println("              Coherence member:" + member1.getId() + "; output key:" + key1 );
+	      }
+	    }
+	}
 }

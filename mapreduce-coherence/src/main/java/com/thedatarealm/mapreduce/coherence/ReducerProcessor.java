@@ -9,7 +9,7 @@ import com.tangosol.net.BackingMapContext;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
-import com.tangosol.util.ExternalizableHelper;
+import com.tangosol.util.Converter;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.MapIndex;
 import com.tangosol.util.extractor.KeyExtractor;
@@ -37,12 +37,13 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 		final BackingMapContext context = getContext(arg0);
 		final Set<Map.Entry<K, Set<Binary>>> entries = getIndexedValues(context);
 		Map<Binary, Binary> bMap = context.getBackingMap();
+		Converter converter = context.getManagerContext().getKeyFromInternalConverter();
 		for (Map.Entry<K, Set<Binary>> entry : entries)
 		{
 			currentValues = new ArrayList<>();
 			for (Object o:entry.getValue())
 			{
-				currentValues.add((V) ExternalizableHelper.CONVERTER_FROM_BINARY.convert(bMap.get(o)));			
+				currentValues.add((V) converter.convert(bMap.get(o)));			
 			}
 			store(entry.getKey(), currentValues);
 			for (Object o:entry.getValue())
@@ -59,6 +60,10 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 				values);
 		for (OrderedKeyValue<K, V> pair : reducedPairs)
 		{
+			if (pair.getKey() == null)
+			{
+				throw new RuntimeException("Null key "+ pair);
+			}
 			CacheFactory.getCache(output).put(pair.getKey(), pair.getValue());
 		}
 	}
