@@ -10,7 +10,7 @@ import com.tangosol.net.cache.KeyAssociation;
 
 @SuppressWarnings("serial")
 public class CompositeKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> implements
-		KeyAssociation, Serializable, Comparable<CompositeKey<K1, K2>>, PortableObject
+		KeyAssociation, Serializable, PortableObject
 {
 	protected K1 key1;
 	protected K2 key2;
@@ -41,12 +41,6 @@ public class CompositeKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> 
 	public Object getAssociatedKey()
 	{
 		return key2;
-	}
-
-	@Override
-	public int compareTo(CompositeKey<K1, K2> o)
-	{
-		return key1.compareTo(o.key1);
 	}
 
 	@Override

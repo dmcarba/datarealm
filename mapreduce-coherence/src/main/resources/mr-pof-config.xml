@@ -26,16 +26,6 @@
 			<class-name>com.thedatarealm.mapreduce.coherence.ReducerProcessor
 			</class-name>
 		</user-type>
-		<user-type>
-			<type-id>20102</type-id>
-			<class-name>com.thedatarealm.mapreduce.coherence.Writer
-			</class-name>
-		</user-type>
-		<user-type>
-			<type-id>20103</type-id>
-			<class-name>com.thedatarealm.mapreduce.coherence.BinaryValueUpdater
-			</class-name>
-		</user-type>
 	</user-type-list>
 
 	<allow-interfaces>true</allow-interfaces>

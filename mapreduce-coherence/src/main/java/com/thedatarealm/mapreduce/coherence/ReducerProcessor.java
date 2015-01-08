@@ -23,7 +23,7 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 	@SuppressWarnings("rawtypes")
 	protected Reducer reducer;
 	protected String output;
-	private Context<K, V> context;
+	private JobContext<K, V> context;
 
 	public ReducerProcessor()
 	{
@@ -44,7 +44,7 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 		}
 		final BackingMapContext bmctx = ((BinaryEntry) arg0.iterator().next())
 				.getBackingMapContext();
-		this.context = new Context<>(bmctx, output, output, false);
+		this.context = new JobContext<>(bmctx, output);
 		final Set<Map.Entry<K, Set<Binary>>> entries = getIndexedValues(bmctx);
 		Map<Binary, Binary> bMap = bmctx.getBackingMap();
 		Converter converter = bmctx.getManagerContext().getKeyFromInternalConverter();

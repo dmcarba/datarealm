@@ -41,7 +41,7 @@ public class MapReduceTest implements Serializable
 	{
 		NamedCache cache = CacheFactory.getCache(INPUT);
 		long j = 0;
-		for (long i = 0; i < 100; i++)
+		for (long i = 0; i < 10; i++)
 		{
 			cache.put(j++, "How many");
 			cache.put(j++, "different words can");
@@ -160,7 +160,7 @@ public class MapReduceTest implements Serializable
 	public static class WordCountMapper implements Mapper<Long, String, String, Long>
 	{
 		@Override
-		public void map(Long key, String value, MapContext<String, Long> context)
+		public void map(Long key, String value, Context<String, Long> context)
 		{
 			for (String word : value.split(" ", -1))
 			{
@@ -182,7 +182,7 @@ public class MapReduceTest implements Serializable
 	public static class WordCountReducer implements Reducer<String, Long, String, Long>
 	{
 		@Override
-		public void reduce(String key, Iterator<Long> values, MapContext<String, Long> context)
+		public void reduce(String key, Iterator<Long> values, Context<String, Long> context)
 		{
 			long total = 0;
 			while (values.hasNext())

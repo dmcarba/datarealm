@@ -17,18 +17,18 @@ import com.thedatarealm.mapreduce.coherence.MapReduce.Mapper;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Reducer;
 
 @SuppressWarnings("serial")
-public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcessor implements PortableObject
+public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcessor implements
+		PortableObject
 {
 	@SuppressWarnings("rawtypes")
 	private Mapper mapper;
 	@SuppressWarnings("rawtypes")
 	private Reducer combiner;
 	private String staging, output;
-	private Context<K,V> context;
-	
+	private JobContext<K, V> context;
+
 	public MapperProcessor()
 	{
-		
 	}
 
 	public MapperProcessor(String staging, String output, Mapper<?, ?, K, V> mapper)
@@ -55,8 +55,14 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		}
 		final BackingMapContext bmctx = ((BinaryEntry) arg0.iterator().next())
 				.getBackingMapContext();
-		this.context = new Context<>(bmctx,
-				staging, output, combiner != null);
+		if (combiner != null)
+		{
+			this.context = new IntermediateContext<K, V>(bmctx, output);
+		}
+		else
+		{
+			this.context = new JobContext<>(bmctx, staging);
+		}
 		for (Iterator iter = arg0.iterator(); iter.hasNext();)
 		{
 			InvocableMap.Entry entry = (InvocableMap.Entry) iter.next();
@@ -80,7 +86,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 	public void readExternal(PofReader paramPofReader) throws IOException
 	{
 		staging = paramPofReader.readString(0);
-		output  =  paramPofReader.readString(1);
+		output = paramPofReader.readString(1);
 		mapper = (Mapper<?, ?, K, V>) paramPofReader.readObject(2);
 		combiner = (Reducer<K, V, K, V>) paramPofReader.readObject(3);
 	}
