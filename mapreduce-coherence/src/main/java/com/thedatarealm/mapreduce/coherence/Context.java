@@ -1,10 +1,9 @@
 package com.thedatarealm.mapreduce.coherence;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.net.CacheFactory;
@@ -12,15 +11,16 @@ import com.tangosol.net.DistributedCacheService;
 import com.tangosol.net.InvocationService;
 import com.tangosol.net.Member;
 
-public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
+public class Context<K extends Comparable<K>, V> implements MapContext<K, V>
 {
+	private static final String WRITER_SERVICE = "Writer";
 	private final Member localMember;
 	private final int memberId;
 	private int count;
 	private final String staging, output;
-	private final static int BUFFER_SIZE = 100;
-	private List<OrderedKeyValue<CompositeKey<? extends Comparable<?>, K>, V>> values;
-	private Map<Member, List<OrderedKeyValue<NodeAwareKey<K>, V>>> keysToMembers;
+	private final static int BUFFER_SIZE = 1000;
+	private Map<Object, Object> values;
+	private Map<Member, Map<Object,Object>> keysToMembers;
 	private int mapCount;
 	private boolean isCombinerPresent;
 	private Comparable<?> sourceKey;
@@ -28,12 +28,13 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 
 	public Context(BackingMapContext bmctx, String staging, String output, boolean isCombinerPresent)
 	{
-		this.localMember = bmctx.getManagerContext().getCacheService().getCluster().getLocalMember();
+		this.localMember = bmctx.getManagerContext().getCacheService().getCluster()
+				.getLocalMember();
 		this.memberId = localMember.getId();
 		this.staging = staging;
 		this.output = output;
 		this.isCombinerPresent = isCombinerPresent;
-		this.values = new ArrayList<>();
+		this.values = new HashMap<>();
 		this.keysToMembers = new HashMap<>();
 		this.service = (DistributedCacheService) bmctx.getManagerContext().getCacheService();
 	}
@@ -42,7 +43,7 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 	{
 		this.sourceKey = sourceKey;
 	}
-	
+
 	public void flush()
 	{
 		if (isCombinerPresent)
@@ -59,6 +60,7 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 
 	public void write(K key, V value)
 	{
+		
 		if (isCombinerPresent)
 		{
 			if (BUFFER_SIZE == values.size())
@@ -70,7 +72,12 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 			{ "unchecked", "rawtypes" })
 			CompositeKey<? extends Comparable<?>, K> ckey = new CompositeKey(key, sourceKey,
 					count++);
-			values.add(new OrderedKeyValue<CompositeKey<? extends Comparable<?>, K>, V>(ckey, value));
+			System.out.println("member " + memberId + " Count " +count);
+			if (values.containsKey(ckey))
+			{
+				throw new RuntimeException("member "+ memberId+ " key already exists: " + ckey);
+			}
+			values.put(ckey, value);
 		}
 		else
 		{
@@ -83,10 +90,9 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 			Member member = service.getKeyOwner(nkey);
 			if (!keysToMembers.containsKey(member))
 			{
-				keysToMembers.put(member, new ArrayList<OrderedKeyValue<NodeAwareKey<K>, V>>());
+				keysToMembers.put(member, new HashMap<Object, Object>());
 			}
-			keysToMembers.get(member).add(
-					new OrderedKeyValue<NodeAwareKey<K>, V>(nkey, value));
+			keysToMembers.get(member).put(nkey, value);
 			mapCount++;
 		}
 	}
@@ -94,19 +100,21 @@ public class Context<K extends Comparable<K>,V> implements MapContext<K, V>
 	private void store()
 	{
 		// Write to local node
-		((InvocationService) CacheFactory.getService("Shuffle")).query(
-				new WriterService<CompositeKey<? extends Comparable<?>, K>, V>(values, output),
+		((InvocationService) CacheFactory.getService(WRITER_SERVICE)).query(
+				new Writer(values, output),
 				Collections.singleton(localMember));
 	}
 
 	private void shuffleAndStore()
 	{
-		for (Map.Entry<Member, List<OrderedKeyValue<NodeAwareKey<K>, V>>> entryList : keysToMembers
+		Writer.Observer observer = new Writer.Observer(keysToMembers.entrySet().size());
+		for (final Entry<Member, Map<Object, Object>> entryList : keysToMembers
 				.entrySet())
 		{
-			((InvocationService) CacheFactory.getService("Shuffle")).query(
-					new WriterService<NodeAwareKey<K>, V>(entryList.getValue(), staging),
-					Collections.singleton(entryList.getKey()));
+			((InvocationService) CacheFactory.getService(WRITER_SERVICE)).execute(
+					new Writer(entryList.getValue(), staging),
+					Collections.singleton(entryList.getKey()), observer);
 		}
+		observer.waitForExecution();
 	}
 }

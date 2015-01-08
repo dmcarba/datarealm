@@ -1,0 +1,43 @@
+<?xml version='1.0'?>
+<pof-config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://xmlns.oracle.com/coherence/coherence-pof-config"
+	xsi:schemaLocation="http://xmlns.oracle.com/coherence/coherence-pof-config
+		coherence-pof-config.xsd">
+	<user-type-list>
+		<include>coherence-pof-config.xml</include>
+		<!-- Objects used in the map reduce framework -->
+		<user-type>
+			<type-id>20000</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.CompositeKey
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>20001</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.NodeAwareKey
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>20100</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.MapperProcessor
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>20101</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.ReducerProcessor
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>20102</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.Writer
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>20103</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.BinaryValueUpdater
+			</class-name>
+		</user-type>
+	</user-type-list>
+
+	<allow-interfaces>true</allow-interfaces>
+	<allow-subclasses>true</allow-subclasses>
+</pof-config>

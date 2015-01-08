@@ -1,13 +1,20 @@
 package com.thedatarealm.mapreduce.coherence;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
+import com.tangosol.io.pof.PortableObject;
 import com.tangosol.net.CacheFactory;
+import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
+import com.tangosol.net.PartitionedService;
 import com.tangosol.util.Filter;
 import com.tangosol.util.extractor.KeyExtractor;
 import com.tangosol.util.filter.AlwaysFilter;
+import com.tangosol.util.filter.KeyAssociatedFilter;
 
 public class MapReduce<K extends Comparable<K>, V>
 {
@@ -23,14 +30,14 @@ public class MapReduce<K extends Comparable<K>, V>
 	public static final KeyExtractor KEY_EXTRACTOR = new KeyExtractor("getKey1");
 
 	public static interface Mapper<MKI extends Comparable<MKI>, MVI, K extends Comparable<K>, V>
-			extends Serializable
+			extends Serializable, PortableObject
 	{
 		public void map(MKI key, MVI value, MapContext<K, V> context);
 	}
 
-	public static interface Reducer<K, V, RKO extends Comparable<RKO>, RVO> extends Serializable
+	public static interface Reducer<K, V, RKO extends Comparable<RKO>, RVO> extends Serializable, PortableObject
 	{
-		public void reduce(K key, List<V> value, MapContext<RKO, RVO> context);
+		public void reduce(K key, Iterator<V> values, MapContext<RKO, RVO> context);
 	}
 
 	public MapReduce(String input, String staging, String output, Mapper<?, ?, K, V> mapper,
@@ -67,6 +74,8 @@ public class MapReduce<K extends Comparable<K>, V>
 		stagingCache.addIndex(KEY_EXTRACTOR, true, null);
 		outputCache.addIndex(KEY_EXTRACTOR, true, null);
 
+		//checkAssociation();
+
 		Filter filter = AlwaysFilter.INSTANCE;
 		if (this.combiner != null)
 		{
@@ -77,30 +86,30 @@ public class MapReduce<K extends Comparable<K>, V>
 		stagingCache.invokeAll(filter, new ReducerProcessor<K, V>(output, this.reducer));
 	}
 
-	// private void checkAssociation()
-	// {
-	// NamedCache inputCache = CacheFactory.getCache(input);
-	// NamedCache outputCache = CacheFactory.getCache(output);
-	// System.out.println("input Cache.size() = " + inputCache.size());
-	// PartitionedService ps1 = (PartitionedService)
-	// inputCache.getCacheService();
-	// Set<Long> inputKeySet = (Set<Long>) inputCache.keySet();
-	// for (Long key: inputKeySet)
-	// {
-	// Member member = ps1.getKeyOwner(key);
-	// System.out.println("Coherence member:" + member.getId() + "; input key:"
-	// + key );
-	// Filter filterAsc = new KeyAssociatedFilter(AlwaysFilter.INSTANCE, key);
-	// Set<CompositeKey> ONKeySet = (Set<CompositeKey>)
-	// outputCache.keySet(filterAsc);
-	// PartitionedService ps2 = (PartitionedService)
-	// outputCache.getCacheService();
-	// for (CompositeKey key1: ONKeySet)
-	// {
-	// Member member1 = ps2.getKeyOwner(key1);
-	// System.out.println("              Coherence member:" + member1.getId() +
-	// "; output key:" + key1 );
-	// }
-	// }
-	// }
+	 private void checkAssociation()
+	 {
+	 NamedCache inputCache = CacheFactory.getCache(input);
+	 NamedCache outputCache = CacheFactory.getCache(output);
+	 System.out.println("input Cache.size() = " + inputCache.size());
+	 PartitionedService ps1 = (PartitionedService)
+	 inputCache.getCacheService();
+	 Set<Long> inputKeySet = (Set<Long>) inputCache.keySet();
+	 for (Long key: inputKeySet)
+	 {
+	 Member member = ps1.getKeyOwner(key);
+	 System.out.println("Coherence member:" + member.getId() + "; input key:"
+	 + key );
+	 Filter filterAsc = new KeyAssociatedFilter(AlwaysFilter.INSTANCE, key);
+	 Set<CompositeKey> ONKeySet = (Set<CompositeKey>)
+	 outputCache.keySet(filterAsc);
+	 PartitionedService ps2 = (PartitionedService)
+	 outputCache.getCacheService();
+	 for (CompositeKey key1: ONKeySet)
+	 {
+	 Member member1 = ps2.getKeyOwner(key1);
+	 System.out.println("              Coherence member:" + member1.getId() +
+	 "; output key:" + key1 );
+	 }
+	 }
+	 }
 }

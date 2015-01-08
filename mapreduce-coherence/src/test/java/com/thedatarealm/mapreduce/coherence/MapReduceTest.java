@@ -1,8 +1,8 @@
 package com.thedatarealm.mapreduce.coherence;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.After;
@@ -11,6 +11,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.littlegrid.ClusterMemberGroupUtils;
 
+import com.tangosol.io.pof.PofReader;
+import com.tangosol.io.pof.PofWriter;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.extractor.KeyExtractor;
@@ -29,19 +31,17 @@ public class MapReduceTest implements Serializable
 	public static void setCacheSystemProperties()
 	{
 		System.setProperty("tangosol.coherence.wka", "localhost");
+		ClusterMemberGroupUtils.newBuilder().setStorageEnabledCount(3).setLogLevel(3)
+				.setFastStartJoinTimeoutMilliseconds(100)
+				.buildAndConfigureForStorageDisabledClient();
 	}
 
 	@Before
 	public void setUp()
 	{
-
-		ClusterMemberGroupUtils.newBuilder().setStorageEnabledCount(3).setLogLevel(3)
-				.setFastStartJoinTimeoutMilliseconds(100)
-				.buildAndConfigureForStorageDisabledClient();
-
 		NamedCache cache = CacheFactory.getCache(INPUT);
 		long j = 0;
-		for (long i = 0; i < 100000; i++)
+		for (long i = 0; i < 100; i++)
 		{
 			cache.put(j++, "How many");
 			cache.put(j++, "different words can");
@@ -53,36 +53,19 @@ public class MapReduceTest implements Serializable
 	@After
 	public void release()
 	{
+		CacheFactory.getCache(INPUT).clear();
+		CacheFactory.getCache(STAGING).clear();
+		CacheFactory.getCache(OUTPUT).clear();
 		CacheFactory.shutdown();
 	}
 
 //	@Test
 	public void testWordCount()
 	{
-		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT,
-				new Mapper<Long, String, String, Long>()
-				{
-					@Override
-					public void map(Long key, String value, MapContext<String, Long> context)
-					{
-						for (String word : value.split(" ", -1))
-						{
-							context.write(word, 1L);
-						}
-					}
-				}, new Reducer<String, Long, String, Long>()
-				{
-					@Override
-					public void reduce(String key, List<Long> values, MapContext<String, Long> context)
-					{
-						long total = 0;
-						for (Long value : values)
-						{
-							total += value;
-						}
-						context.write(key, total);
-					}
-				}).mapReduce();
+		long start = System.currentTimeMillis();
+		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT, new WordCountMapper(),
+				new WordCountReducer()).mapReduce();
+		System.out.println("TIME TAKEN:" + (System.currentTimeMillis() - start));
 
 		NamedCache stagingCache = CacheFactory.getCache(STAGING);
 
@@ -110,32 +93,10 @@ public class MapReduceTest implements Serializable
 	public void testWordCountWithCombiner()
 	{
 		Reducer<String, Long, String, Long> reducer;
-		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT,
-				new Mapper<Long, String, String, Long>()
-				{
-					@Override
-					public void map(Long key, String value, MapContext<String, Long> context)
-					{
-						for (String word : value.split(" ", -1))
-						{
-							context.write(word, 1L);
-						}
-					}
-				}, reducer = new Reducer<String, Long, String, Long>()
-				{
-
-					@Override
-					public void reduce(String key, List<Long> values, MapContext<String, Long> context)
-					{
-						long total = 0;
-						for (Long value : values)
-						{
-							total += value;
-						}
-						context.write(key, total);
-					}
-				}, reducer).mapReduce();
-
+		long start = System.currentTimeMillis();
+		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT, new WordCountMapper(),
+				reducer = new WordCountReducer(), reducer).mapReduce();
+		System.out.println("TIME TAKEN:" + (System.currentTimeMillis() - start));
 		NamedCache stagingCache = CacheFactory.getCache(STAGING);
 		NamedCache inputCache = CacheFactory.getCache(INPUT);
 
@@ -194,6 +155,52 @@ public class MapReduceTest implements Serializable
 		}
 		System.out.println("count=" + count);
 
+	}
+
+	public static class WordCountMapper implements Mapper<Long, String, String, Long>
+	{
+		@Override
+		public void map(Long key, String value, MapContext<String, Long> context)
+		{
+			for (String word : value.split(" ", -1))
+			{
+				context.write(word, 1L);
+			}
+		}
+
+		@Override
+		public void readExternal(PofReader paramPofReader) throws IOException
+		{
+		}
+
+		@Override
+		public void writeExternal(PofWriter paramPofWriter) throws IOException
+		{
+		}
+	}
+
+	public static class WordCountReducer implements Reducer<String, Long, String, Long>
+	{
+		@Override
+		public void reduce(String key, Iterator<Long> values, MapContext<String, Long> context)
+		{
+			long total = 0;
+			while (values.hasNext())
+			{
+				total += values.next();
+			}
+			context.write(key, total);
+		}
+
+		@Override
+		public void readExternal(PofReader paramPofReader) throws IOException
+		{
+		}
+
+		@Override
+		public void writeExternal(PofWriter paramPofWriter) throws IOException
+		{
+		}
 	}
 
 }

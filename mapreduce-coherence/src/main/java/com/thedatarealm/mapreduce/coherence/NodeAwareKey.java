@@ -1,5 +1,6 @@
 package com.thedatarealm.mapreduce.coherence;
 
+
 @SuppressWarnings("serial")
 public class NodeAwareKey<K extends Comparable<K>> extends CompositeKey<K, Integer> 
 {

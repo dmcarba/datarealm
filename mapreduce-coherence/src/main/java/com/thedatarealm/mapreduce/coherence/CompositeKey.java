@@ -1,12 +1,16 @@
 package com.thedatarealm.mapreduce.coherence;
 
+import java.io.IOException;
 import java.io.Serializable;
 
+import com.tangosol.io.pof.PofReader;
+import com.tangosol.io.pof.PofWriter;
+import com.tangosol.io.pof.PortableObject;
 import com.tangosol.net.cache.KeyAssociation;
 
 @SuppressWarnings("serial")
 public class CompositeKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> implements
-		KeyAssociation, Serializable, Comparable<CompositeKey<K1, K2>>
+		KeyAssociation, Serializable, Comparable<CompositeKey<K1, K2>>, PortableObject
 {
 	protected K1 key1;
 	protected K2 key2;
@@ -56,17 +60,56 @@ public class CompositeKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> 
 		return result;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean equals(Object obj)
 	{
-		return key1.equals(((CompositeKey<K1, K2>) obj).key1);
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		CompositeKey<?, ?> other = (CompositeKey<?, ?>) obj;
+		if (key1 == null)
+		{
+			if (other.key1 != null)
+				return false;
+		}
+		else if (!key1.equals(other.key1))
+			return false;
+		if (key2 == null)
+		{
+			if (other.key2 != null)
+				return false;
+		}
+		else if (!key2.equals(other.key2))
+			return false;
+		if (sequence != other.sequence)
+			return false;
+		return true;
 	}
 
 	@Override
 	public String toString()
 	{
 		return "CompositeKey [key1=" + key1 + ", key2=" + key2 + ", sequence=" + sequence + "]";
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void readExternal(PofReader paramPofReader) throws IOException
+	{
+		key1 = (K1) paramPofReader.readObject(1);
+		key2 = (K2) paramPofReader.readObject(2);
+		sequence = paramPofReader.readLong(3);
+	}
+
+	@Override
+	public void writeExternal(PofWriter paramPofWriter) throws IOException
+	{
+		paramPofWriter.writeObject(1, key1);
+		paramPofWriter.writeObject(2, key2);
+		paramPofWriter.writeLong(3, sequence);
 	}
 
 }
