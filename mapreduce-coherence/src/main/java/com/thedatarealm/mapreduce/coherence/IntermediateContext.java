@@ -15,7 +15,6 @@
  */
 package com.thedatarealm.mapreduce.coherence;
 
-import com.tangosol.net.BackingMapContext;
 
 public class IntermediateContext<K extends Comparable<K>, V> extends JobContext<K,V>
 {
@@ -27,9 +26,9 @@ public class IntermediateContext<K extends Comparable<K>, V> extends JobContext<
 		this.sourceKey = sourceKey;
 	}
 
-	public IntermediateContext(BackingMapContext bmctx,String output)
+	public IntermediateContext(int memberId,String output)
 	{
-		super(bmctx, output);
+		super(memberId, output);
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

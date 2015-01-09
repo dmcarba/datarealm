@@ -23,7 +23,6 @@ import java.util.Set;
 import com.tangosol.io.pof.PofReader;
 import com.tangosol.io.pof.PofWriter;
 import com.tangosol.io.pof.PortableObject;
-import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap;
 import com.tangosol.util.InvocableMap.Entry;
@@ -66,15 +65,16 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		{
 			return null;
 		}
-		final BackingMapContext bmctx = ((BinaryEntry) arg0.iterator().next())
-				.getBackingMapContext();
+		final int id = ((BinaryEntry) arg0.iterator().next())
+				.getBackingMapContext().getManagerContext().getCacheService().getCluster().getLocalMember()
+				.getId();
 		if (combiningOutput)
 		{
-			this.context = new IntermediateContext<K, V>(bmctx, output);
+			this.context = new IntermediateContext<K, V>(id, output);
 		}
 		else
 		{
-			this.context = new JobContext<>(bmctx, staging);
+			this.context = new JobContext<>(id, staging);
 		}
 		for (Iterator iter = arg0.iterator(); iter.hasNext();)
 		{

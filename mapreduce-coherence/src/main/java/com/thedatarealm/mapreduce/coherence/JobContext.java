@@ -18,7 +18,6 @@ package com.thedatarealm.mapreduce.coherence;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.tangosol.net.BackingMapContext;
 import com.tangosol.net.CacheFactory;
 
 public class JobContext<K extends Comparable<K>, V> implements Context<K, V>
@@ -30,10 +29,9 @@ public class JobContext<K extends Comparable<K>, V> implements Context<K, V>
 	private final static int BUFFER_SIZE = 1000;
 	private Map<Object, Object> values;
 
-	public JobContext(BackingMapContext bmctx, String output)
+	public JobContext(int memberId, String output)
 	{
-		this.memberId = bmctx.getManagerContext().getCacheService().getCluster().getLocalMember()
-				.getId();
+		this.memberId = memberId;
 		this.output = output;
 		this.values = new HashMap<>();
 	}

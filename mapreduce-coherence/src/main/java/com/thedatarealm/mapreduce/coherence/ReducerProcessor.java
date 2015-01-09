@@ -59,7 +59,8 @@ public class ReducerProcessor<K extends Comparable<K>, V> extends AbstractProces
 		}
 		final BackingMapContext bmctx = ((BinaryEntry) arg0.iterator().next())
 				.getBackingMapContext();
-		this.context = new JobContext<>(bmctx, output);
+		this.context = new JobContext<>(bmctx.getManagerContext().getCacheService().getCluster()
+				.getLocalMember().getId(), output);
 		final Set<Map.Entry<K, Set<Binary>>> entries = getIndexedValues(bmctx);
 		Map<Binary, Binary> bMap = bmctx.getBackingMap();
 		Converter converter = bmctx.getManagerContext().getKeyFromInternalConverter();
