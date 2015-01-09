@@ -130,7 +130,7 @@ public class MapReduceTest implements Serializable
 		setUpIndexData();
 		NamedCache inputCache = CacheFactory.getCache(INPUT);
 		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<String, Long>(STAGING, OUTPUT,
-				new WordCountMapper(), new WordCountReducer()));
+				new WordCountMapper(), true));
 		//Check that all combined keys generated from a mapper node are stored in that node
 		checkAssociation(INPUT, OUTPUT);
 	}

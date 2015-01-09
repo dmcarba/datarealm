@@ -79,7 +79,7 @@ public class MapReduce<K extends Comparable<K>, V>
 		outputCache.clear();
 
 		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<K, V>(staging, output,
-				this.mapper, this.combiner));
+				this.mapper, this.combiner != null));
 
 		stagingCache.addIndex(KEY_EXTRACTOR, true, null);
 		outputCache.addIndex(KEY_EXTRACTOR, true, null);

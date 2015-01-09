@@ -29,7 +29,6 @@ import com.tangosol.util.InvocableMap;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.processor.AbstractProcessor;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Mapper;
-import com.thedatarealm.mapreduce.coherence.MapReduce.Reducer;
 
 @SuppressWarnings("serial")
 public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcessor implements
@@ -37,8 +36,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 {
 	@SuppressWarnings("rawtypes")
 	private Mapper mapper;
-	@SuppressWarnings("rawtypes")
-	private Reducer combiner;
+	private boolean combiningOutput;
 	private String staging, output;
 	private JobContext<K, V> context;
 
@@ -54,10 +52,10 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 	}
 
 	public MapperProcessor(String staging, String output, Mapper<?, ?, K, V> mapper,
-			Reducer<K, V, K, V> combiner)
+			boolean combiningOutput)
 	{
 		this(staging, output, mapper);
-		this.combiner = combiner;
+		this.combiningOutput = combiningOutput;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -70,7 +68,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		}
 		final BackingMapContext bmctx = ((BinaryEntry) arg0.iterator().next())
 				.getBackingMapContext();
-		if (combiner != null)
+		if (combiningOutput)
 		{
 			this.context = new IntermediateContext<K, V>(bmctx, output);
 		}
@@ -103,7 +101,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		staging = paramPofReader.readString(0);
 		output = paramPofReader.readString(1);
 		mapper = (Mapper<?, ?, K, V>) paramPofReader.readObject(2);
-		combiner = (Reducer<K, V, K, V>) paramPofReader.readObject(3);
+		combiningOutput = paramPofReader.readBoolean(3);
 	}
 
 	@Override
@@ -112,6 +110,6 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		paramPofWriter.writeString(0, staging);
 		paramPofWriter.writeString(1, output);
 		paramPofWriter.writeObject(2, mapper);
-		paramPofWriter.writeObject(3, combiner);
+		paramPofWriter.writeBoolean(3, combiningOutput);
 	}
 }
