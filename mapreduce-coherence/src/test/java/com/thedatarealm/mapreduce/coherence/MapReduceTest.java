@@ -1,22 +1,31 @@
 package com.thedatarealm.mapreduce.coherence;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.littlegrid.ClusterMemberGroupUtils;
 
 import com.tangosol.io.pof.PofReader;
 import com.tangosol.io.pof.PofWriter;
+import com.tangosol.io.pof.PortableObject;
 import com.tangosol.net.CacheFactory;
+import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
-import com.tangosol.util.extractor.KeyExtractor;
+import com.tangosol.net.PartitionedService;
+import com.tangosol.util.Filter;
+import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.EqualsFilter;
+import com.tangosol.util.filter.KeyAssociatedFilter;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Mapper;
 import com.thedatarealm.mapreduce.coherence.MapReduce.Reducer;
 
@@ -27,6 +36,17 @@ public class MapReduceTest implements Serializable
 	private final static String STAGING = "STAGING_CACHE";
 	private final static String OUTPUT = "OUTPUT_CACHE";
 
+	private static final String[] COUNT_SAMPLE =
+	{ "How many", "different words can", "you count in", "this text", "keep the count", "of each different one" };
+	
+	private static final int SAMPLE_SIZE = 10;
+
+	private static final String[] INVERTED_SAMPLE =
+	{
+			"When a distinguished but elderly scientist states that something is possible, he is almost certainly right. When he states that something is impossible, he is very probably wrong",
+			"The only way of discovering the limits of the possible is to venture a little way past them into the impossible",
+			"Any sufficiently advanced technology is indistinguishable from magic" };
+
 	@BeforeClass
 	public static void setCacheSystemProperties()
 	{
@@ -36,17 +56,25 @@ public class MapReduceTest implements Serializable
 				.buildAndConfigureForStorageDisabledClient();
 	}
 
-	@Before
-	public void setUp()
+	public void setUpCountData()
 	{
 		NamedCache cache = CacheFactory.getCache(INPUT);
 		long j = 0;
-		for (long i = 0; i < 10; i++)
+		for (long i = 0; i < SAMPLE_SIZE; i++)
 		{
-			cache.put(j++, "How many");
-			cache.put(j++, "different words can");
-			cache.put(j++, "you count in");
-			cache.put(j++, "this text");
+			for (int z = 0; z < COUNT_SAMPLE.length; z++)
+			{
+				cache.put(j++, COUNT_SAMPLE[z]);
+			}
+		}
+	}
+
+	public void setUpIndexData()
+	{
+		NamedCache cache = CacheFactory.getCache(INPUT);
+		for (long i = 0; i < INVERTED_SAMPLE.length; i++)
+		{
+			cache.put(i, INVERTED_SAMPLE[(int) i]);
 		}
 	}
 
@@ -59,101 +87,171 @@ public class MapReduceTest implements Serializable
 		CacheFactory.shutdown();
 	}
 
-//	@Test
+	@Test
 	public void testWordCount()
 	{
-		long start = System.currentTimeMillis();
+		setUpCountData();
 		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT, new WordCountMapper(),
 				new WordCountReducer()).mapReduce();
-		System.out.println("TIME TAKEN:" + (System.currentTimeMillis() - start));
-
-		NamedCache stagingCache = CacheFactory.getCache(STAGING);
-
-		int count = 0;
-		for (Iterator iter = stagingCache.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			System.out.println("key=" + entry.getKey() + " value=" + entry.getValue());
-			count++;
-		}
-		System.out.println("count=" + count);
-
 		NamedCache outputCache = CacheFactory.getCache(OUTPUT);
-		count = 0;
-		for (Iterator iter = outputCache.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			System.out.println("key=" + entry.getKey() + " value=" + entry.getValue());
-			count++;
-		}
-		System.out.println("count=" + count);
+		assertEquals(getCountValue(outputCache, "count"),SAMPLE_SIZE*2);
+		assertEquals(getCountValue(outputCache, "different"),SAMPLE_SIZE*2);
+		assertEquals(getCountValue(outputCache, "many"),SAMPLE_SIZE);
 	}
 
 	@Test
 	public void testWordCountWithCombiner()
 	{
+		setUpCountData();
 		Reducer<String, Long, String, Long> reducer;
-		long start = System.currentTimeMillis();
 		new MapReduce<String, Long>(INPUT, STAGING, OUTPUT, new WordCountMapper(),
 				reducer = new WordCountReducer(), reducer).mapReduce();
-		System.out.println("TIME TAKEN:" + (System.currentTimeMillis() - start));
-		NamedCache stagingCache = CacheFactory.getCache(STAGING);
-		NamedCache inputCache = CacheFactory.getCache(INPUT);
-
-		int count = 0;
-		for (Iterator iter = inputCache.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			// System.out.println("key=" + entry.getKey() + " value=" +
-			// entry.getValue());
-			count++;
-		}
-		System.out.println("input count=" + count);
-
-		count = 0;
-		for (Iterator iter = stagingCache.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			// System.out.println("key=" + entry.getKey() + " value=" +
-			// entry.getValue());
-			count++;
-		}
-		System.out.println("count=" + count);
-
 		NamedCache outputCache = CacheFactory.getCache(OUTPUT);
-		count = 0;
-		for (Iterator iter = outputCache.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			System.out.println("key=" + entry.getKey() + " value=" + entry.getValue());
-			count++;
-		}
-		System.out.println("count=" + count);
+		assertEquals(getCountValue(outputCache, "count"),SAMPLE_SIZE*2);
+		assertEquals(getCountValue(outputCache, "different"),SAMPLE_SIZE*2);
+		assertEquals(getCountValue(outputCache, "many"),SAMPLE_SIZE);
+	}
 
-		System.out.println("------------------");
-		count = 0;
-		for (Iterator iter = stagingCache.entrySet(
-				new EqualsFilter(new KeyExtractor("isDistributed"), false)).iterator(); iter
-				.hasNext();)
+	@Test
+	public void testInvertedIndex()
+	{
+		setUpIndexData();
+		new MapReduce<String, LongPair>(INPUT, STAGING, OUTPUT, new InvertedIndexMapper(),
+				new InvertedIndexReducer()).mapReduce();
+		NamedCache outputCache = CacheFactory.getCache(OUTPUT);
+		assertTrue(getIndexValue(outputCache, "is").contains("f:4|l:0"));
+		assertEquals(getIndexValue(outputCache, "states"),"f:2|l:0");
+		assertEquals(getIndexValue(outputCache, "the"),"f:4|l:1");
+	}
+	
+	@Test
+	public void testCombinerDataLocality()
+	{
+		setUpIndexData();
+		NamedCache inputCache = CacheFactory.getCache(INPUT);
+		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<String, Long>(STAGING, OUTPUT,
+				new WordCountMapper(), new WordCountReducer()));
+		//Check that all combined keys generated from a mapper node are stored in that node
+		checkAssociation(INPUT, OUTPUT);
+	}
+
+	private String getIndexValue(NamedCache cache, String word)
+	{
+		return (String) ((Entry<?, ?>) cache
+				.entrySet(new EqualsFilter(MapReduce.KEY_EXTRACTOR, word)).iterator().next())
+				.getValue();
+	}
+
+	private long getCountValue(NamedCache cache, String word)
+	{
+		return (long) ((Entry<?, ?>) cache
+				.entrySet(new EqualsFilter(MapReduce.KEY_EXTRACTOR, word)).iterator().next())
+				.getValue();
+	}
+	
+	public static class LongPair implements PortableObject
+	{
+
+		private long frequency;
+		private long line;
+
+		public LongPair()
 		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			// System.out.println("key=" + entry.getKey() + " value=" +
-			// entry.getValue());
-			count++;
 		}
-		System.out.println("count=" + count);
-		System.out.println("------------------");
-		count = 0;
-		for (Iterator iter = stagingCache.entrySet(
-				new EqualsFilter(new KeyExtractor("isDistributed"), true)).iterator(); iter
-				.hasNext();)
+
+		public LongPair(long frequency, long line)
 		{
-			Map.Entry entry = (Map.Entry) iter.next();
-			// System.out.println("key=" + entry.getKey() + " value=" +
-			// entry.getValue());
-			count++;
+			this.frequency = frequency;
+			this.line = line;
 		}
-		System.out.println("count=" + count);
+
+		@Override
+		public void readExternal(PofReader paramPofReader) throws IOException
+		{
+			frequency = paramPofReader.readLong(0);
+			line = paramPofReader.readLong(1);
+		}
+
+		@Override
+		public void writeExternal(PofWriter paramPofWriter) throws IOException
+		{
+			paramPofWriter.writeLong(0, frequency);
+			paramPofWriter.writeLong(1, line);
+		}
+
+		@Override
+		public String toString()
+		{
+			return "f:" + frequency + "|l:" + line;
+		}
+
+	}
+
+	public static class InvertedIndexMapper implements Mapper<Long, String, String, LongPair>
+	{
+
+		@Override
+		public void readExternal(PofReader paramPofReader) throws IOException
+		{
+		}
+
+		@Override
+		public void writeExternal(PofWriter paramPofWriter) throws IOException
+		{
+		}
+
+		@Override
+		public void map(Long key, String value, Context<String, LongPair> context)
+		{
+			Map<String, long[]> wordToFreq = new HashMap<>();
+			for (String word : value.split("[ .,]", -1))
+			{
+				word = word.toLowerCase();
+				long[] l = wordToFreq.get(word);
+				if (l == null)
+				{
+					l = new long[]
+					{ 0 };
+					wordToFreq.put(word, l);
+				}
+				l[0]++;
+			}
+			for (Map.Entry<String, long[]> entry : wordToFreq.entrySet())
+			{
+				context.write(entry.getKey(), new LongPair(entry.getValue()[0], key));
+			}
+
+		}
+
+	}
+
+	public static class InvertedIndexReducer implements Reducer<String, LongPair, String, String>
+	{
+
+		@Override
+		public void readExternal(PofReader arg0) throws IOException
+		{
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void writeExternal(PofWriter arg0) throws IOException
+		{
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void reduce(String key, Iterator<LongPair> values, Context<String, String> context)
+		{
+			StringBuilder out = new StringBuilder();
+			while (values.hasNext())
+			{
+				out.append(values.next().toString());
+			}
+			context.write(key, out.toString());
+		}
 
 	}
 
@@ -203,4 +301,25 @@ public class MapReduceTest implements Serializable
 		}
 	}
 
+	private void checkAssociation(String input, String output)
+	{
+		NamedCache inputCache = CacheFactory.getCache(input);
+		NamedCache outputCache = CacheFactory.getCache(output);
+		PartitionedService ps1 = (PartitionedService) inputCache.getCacheService();
+		Set<Object> inputKeySet = (Set<Object>) inputCache.keySet();
+		for (Object key : inputKeySet)
+		{
+			Member member = ps1.getKeyOwner(key);
+			Filter filterAsc = new KeyAssociatedFilter(AlwaysFilter.INSTANCE, key);
+			@SuppressWarnings("rawtypes")
+			Set<CompositeKey> keyset = (Set<CompositeKey>) outputCache.keySet(filterAsc);
+			PartitionedService ps2 = (PartitionedService) outputCache.getCacheService();
+			for (CompositeKey<?, ?> key1 : keyset)
+			{
+				Member member1 = ps2.getKeyOwner(key1);
+				assertEquals(member, member1);
+				assertEquals(key, key1.getKey2());
+			}
+		}
+	}
 }

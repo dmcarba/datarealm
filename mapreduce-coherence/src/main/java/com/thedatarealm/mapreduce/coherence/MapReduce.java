@@ -58,18 +58,17 @@ public class MapReduce<K extends Comparable<K>, V>
 	public void mapReduce()
 	{
 		NamedCache inputCache = CacheFactory.getCache(input);
+		NamedCache stagingCache = CacheFactory.getCache(staging);
+		NamedCache outputCache = CacheFactory.getCache(output);
+		stagingCache.clear();
+		outputCache.clear();
 
 		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<K, V>(staging, output,
 				this.mapper, this.combiner));
 
-		NamedCache stagingCache = CacheFactory.getCache(staging);
-		NamedCache outputCache = CacheFactory.getCache(output);
-
 		stagingCache.addIndex(KEY_EXTRACTOR, true, null);
 		outputCache.addIndex(KEY_EXTRACTOR, true, null);
-
-		//checkAssociation();
-
+		
 		Filter filter = AlwaysFilter.INSTANCE;
 		if (this.combiner != null)
 		{
@@ -79,31 +78,5 @@ public class MapReduce<K extends Comparable<K>, V>
 		}
 		stagingCache.invokeAll(filter, new ReducerProcessor<K, V>(output, this.reducer));
 	}
-
-//	 private void checkAssociation()
-//	 {
-//	 NamedCache inputCache = CacheFactory.getCache(input);
-//	 NamedCache outputCache = CacheFactory.getCache(output);
-//	 System.out.println("input Cache.size() = " + inputCache.size());
-//	 PartitionedService ps1 = (PartitionedService)
-//	 inputCache.getCacheService();
-//	 Set<Long> inputKeySet = (Set<Long>) inputCache.keySet();
-//	 for (Long key: inputKeySet)
-//	 {
-//	 Member member = ps1.getKeyOwner(key);
-//	 System.out.println("Coherence member:" + member.getId() + "; input key:"
-//	 + key );
-//	 Filter filterAsc = new KeyAssociatedFilter(AlwaysFilter.INSTANCE, key);
-//	 Set<CompositeKey> ONKeySet = (Set<CompositeKey>)
-//	 outputCache.keySet(filterAsc);
-//	 PartitionedService ps2 = (PartitionedService)
-//	 outputCache.getCacheService();
-//	 for (CompositeKey key1: ONKeySet)
-//	 {
-//	 Member member1 = ps2.getKeyOwner(key1);
-//	 System.out.println("              Coherence member:" + member1.getId() +
-//	 "; output key:" + key1 );
-//	 }
-//	 }
-//	 }
+	
 }

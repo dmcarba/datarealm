@@ -16,6 +16,21 @@
 			<class-name>com.thedatarealm.mapreduce.coherence.MapReduceTest$WordCountReducer
 			</class-name>
 		</user-type>
+		<user-type>
+			<type-id>10002</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.MapReduceTest$InvertedIndexMapper
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>10003</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.MapReduceTest$InvertedIndexReducer
+			</class-name>
+		</user-type>
+		<user-type>
+			<type-id>10004</type-id>
+			<class-name>com.thedatarealm.mapreduce.coherence.MapReduceTest$LongPair
+			</class-name>
+		</user-type>
 	</user-type-list>
 
 	<allow-interfaces>true</allow-interfaces>
