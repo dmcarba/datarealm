@@ -61,10 +61,5 @@ public class JobContext<K extends Comparable<K>, V> implements Context<K, V>
 	{
 		CacheFactory.getCache(target).putAll(values);
 	}
-	
-	public void setSourceKey(Object sourceKey)
-	{
-	}
-
 
 }
