@@ -5,21 +5,65 @@
 	<caching-scheme-mapping>
 		<cache-mapping>
 			<cache-name>INPUT_CACHE</cache-name>
-			<scheme-name>test-distributed-scheme</scheme-name>
+			<scheme-name>test-distributed-scheme1</scheme-name>
 		</cache-mapping>
 		<cache-mapping>
 			<cache-name>STAGING_CACHE</cache-name>
-			<scheme-name>test-distributed-scheme</scheme-name>
+			<scheme-name>test-distributed-scheme2</scheme-name>
 		</cache-mapping>
 		<cache-mapping>
 			<cache-name>OUTPUT_CACHE</cache-name>
-			<scheme-name>test-distributed-scheme</scheme-name>
+			<scheme-name>test-distributed-scheme3</scheme-name>
 		</cache-mapping>
 	</caching-scheme-mapping>
 	<caching-schemes>
 		<distributed-scheme>
-			<scheme-name>test-distributed-scheme</scheme-name>
-			<service-name>test-service</service-name>
+			<scheme-name>test-distributed-scheme1</scheme-name>
+			<service-name>test-service1</service-name>
+			<serializer>
+				<instance>
+					<class-name>com.tangosol.io.pof.ConfigurablePofContext</class-name>
+					<init-params>
+						<init-param>
+							<param-type>String</param-type>
+							<param-value>test-pof-config.xml</param-value>
+						</init-param>
+					</init-params>
+				</instance>
+			</serializer>
+			<thread-count>10</thread-count>
+			<backing-map-scheme>
+				<local-scheme>
+					<unit-calculator>BINARY</unit-calculator>
+				</local-scheme>
+			</backing-map-scheme>
+			<autostart>true</autostart>
+		</distributed-scheme>
+		<distributed-scheme>
+			<scheme-name>test-distributed-scheme2</scheme-name>
+			<service-name>test-service2</service-name>
+			<serializer>
+				<instance>
+					<class-name>com.tangosol.io.pof.ConfigurablePofContext</class-name>
+					<init-params>
+						<init-param>
+							<param-type>String</param-type>
+							<param-value>test-pof-config.xml</param-value>
+						</init-param>
+					</init-params>
+				</instance>
+			</serializer>
+			<thread-count>10</thread-count>
+			<backing-map-scheme>
+				<local-scheme>
+					<unit-calculator>BINARY</unit-calculator>
+				</local-scheme>
+			</backing-map-scheme>
+			<autostart>true</autostart>
+		</distributed-scheme>
+		<distributed-scheme>
+			<scheme-name>test-distributed-scheme3</scheme-name>
+			<service-name>test-service3</service-name>
 			<serializer>
 				<instance>
 					<class-name>com.tangosol.io.pof.ConfigurablePofContext</class-name>
