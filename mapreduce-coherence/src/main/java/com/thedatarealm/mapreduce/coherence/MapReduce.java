@@ -82,13 +82,12 @@ public class MapReduce<K extends Comparable<K>, V>
 				this.mapper, this.combiner != null));
 
 		stagingCache.addIndex(KEY_EXTRACTOR, true, null);
-		outputCache.addIndex(KEY_EXTRACTOR, true, null);
 		
 		Filter filter = AlwaysFilter.INSTANCE;
 		if (this.combiner != null)
 		{
+			outputCache.addIndex(KEY_EXTRACTOR, true, null);
 			outputCache.invokeAll(filter, new ReducerProcessor<K, V>(staging, this.combiner));
-			outputCache.clear();
 			outputCache.removeIndex(KEY_EXTRACTOR);
 		}
 		stagingCache.invokeAll(filter, new ReducerProcessor<K, V>(output, this.reducer));
