@@ -38,7 +38,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 {
 	@SuppressWarnings("rawtypes")
 	private Mapper mapper;
-	private boolean combiningOutput;
+	private boolean combineOutput;
 	private String staging, output;
 	private JobContext<K, V> context;
 
@@ -54,10 +54,10 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 	}
 
 	public MapperProcessor(String staging, String output, Mapper<?, ?, K, V> mapper,
-			boolean combiningOutput)
+			boolean combineOutput)
 	{
 		this(staging, output, mapper);
-		this.combiningOutput = combiningOutput;
+		this.combineOutput = combineOutput;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -71,7 +71,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		final BackingMapManagerContext bmctx = ((BinaryEntry) arg0.iterator().next())
 				.getBackingMapContext().getManagerContext();
 		final int id = bmctx.getCacheService().getCluster().getLocalMember().getId();
-		if (combiningOutput)
+		if (combineOutput)
 		{
 			this.context = new IntermediateContext<K, V>(id, output,
 					((DistributedCacheService) CacheFactory.getCache(output).getCacheService())
@@ -106,7 +106,7 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		staging = paramPofReader.readString(0);
 		output = paramPofReader.readString(1);
 		mapper = (Mapper<?, ?, K, V>) paramPofReader.readObject(2);
-		combiningOutput = paramPofReader.readBoolean(3);
+		combineOutput = paramPofReader.readBoolean(3);
 	}
 
 	@Override
@@ -115,6 +115,6 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		paramPofWriter.writeString(0, staging);
 		paramPofWriter.writeString(1, output);
 		paramPofWriter.writeObject(2, mapper);
-		paramPofWriter.writeBoolean(3, combiningOutput);
+		paramPofWriter.writeBoolean(3, combineOutput);
 	}
 }
