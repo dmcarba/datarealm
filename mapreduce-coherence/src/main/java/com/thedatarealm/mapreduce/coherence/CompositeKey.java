@@ -25,7 +25,7 @@ import com.tangosol.io.pof.PortableObject;
 import com.tangosol.net.cache.KeyAssociation;
 
 @SuppressWarnings("serial")
-public class CompositeKey<K1 extends Comparable<K1>, K2 extends Comparable<K2>> implements
+public class CompositeKey<K1 extends Comparable<K1>, K2> implements
 		KeyAssociation, Serializable, PortableObject
 {
 	protected K1 key1;

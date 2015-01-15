@@ -39,7 +39,7 @@ public class MapReduceTest implements Serializable
 	private static final String[] COUNT_SAMPLE =
 	{ "How many", "different words can", "you count in", "this text", "keep the count", "of each different one" };
 	
-	private static final int SAMPLE_SIZE = 10;
+	private static final int SAMPLE_SIZE = 2;
 
 	private static final String[] INVERTED_SAMPLE =
 	{
@@ -110,6 +110,7 @@ public class MapReduceTest implements Serializable
 		assertEquals(getCountValue(outputCache, "count"),SAMPLE_SIZE*2);
 		assertEquals(getCountValue(outputCache, "different"),SAMPLE_SIZE*2);
 		assertEquals(getCountValue(outputCache, "many"),SAMPLE_SIZE);
+		printCache(OUTPUT);
 	}
 
 	@Test
@@ -127,12 +128,22 @@ public class MapReduceTest implements Serializable
 	@Test
 	public void testCombinerDataLocality()
 	{
-		setUpIndexData();
+		setUpCountData();
 		NamedCache inputCache = CacheFactory.getCache(INPUT);
 		inputCache.invokeAll(AlwaysFilter.INSTANCE, new MapperProcessor<String, Long>(STAGING, OUTPUT,
 				new WordCountMapper(), true));
 		//Check that all combined keys generated from a mapper node are stored in that node
 		checkAssociation(INPUT, OUTPUT);
+//		printCache(OUTPUT);
+	}
+	
+	private void printCache(String cache)
+	{
+		System.out.println("Cache " + cache);
+		for (Map.Entry<Object,Object> entry : (Set<Entry<Object,Object>>) CacheFactory.getCache(cache).entrySet())
+		{
+			System.out.println(entry);
+		}
 	}
 
 	private String getIndexValue(NamedCache cache, String word)
@@ -306,20 +317,34 @@ public class MapReduceTest implements Serializable
 		NamedCache inputCache = CacheFactory.getCache(input);
 		NamedCache outputCache = CacheFactory.getCache(output);
 		PartitionedService ps1 = (PartitionedService) inputCache.getCacheService();
-		Set<Object> inputKeySet = (Set<Object>) inputCache.keySet();
+		PartitionedService ps2 = (PartitionedService) outputCache.getCacheService();
+		Set<Object> inputKeySet = (Set<Object>) inputCache.keySet();		
 		for (Object key : inputKeySet)
 		{
 			Member member = ps1.getKeyOwner(key);
 			Filter filterAsc = new KeyAssociatedFilter(AlwaysFilter.INSTANCE, key);
 			@SuppressWarnings("rawtypes")
 			Set<CompositeKey> keyset = (Set<CompositeKey>) outputCache.keySet(filterAsc);
-			PartitionedService ps2 = (PartitionedService) outputCache.getCacheService();
+			
 			for (CompositeKey<?, ?> key1 : keyset)
 			{
 				Member member1 = ps2.getKeyOwner(key1);
 				assertEquals(member, member1);
-				assertEquals(key, key1.getKey2());
 			}
 		}
+		
+		Set<Map.Entry<Object,Object>> inputEntrySet = (Set<Map.Entry<Object,Object>>) inputCache.entrySet();
+		Set<Map.Entry<Object,Object>> outputEntrySet = (Set<Map.Entry<Object,Object>>) outputCache.entrySet();
+		
+		for (Entry<Object,Object> entry:inputEntrySet)
+		{
+			System.out.println(ps1.getKeyOwner(entry.getKey()).getId()+" "+ entry);
+		}
+		System.out.println("===========");
+		for (Entry<Object,Object> entry:outputEntrySet)
+		{
+			System.out.println(ps2.getKeyOwner(entry.getKey()).getId()+" "+ entry);
+		}
+		
 	}
 }

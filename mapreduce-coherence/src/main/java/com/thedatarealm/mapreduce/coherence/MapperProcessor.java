@@ -23,6 +23,9 @@ import java.util.Set;
 import com.tangosol.io.pof.PofReader;
 import com.tangosol.io.pof.PofWriter;
 import com.tangosol.io.pof.PortableObject;
+import com.tangosol.net.BackingMapManagerContext;
+import com.tangosol.net.CacheFactory;
+import com.tangosol.net.DistributedCacheService;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap;
 import com.tangosol.util.InvocableMap.Entry;
@@ -65,12 +68,16 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		{
 			return null;
 		}
-		final int id = ((BinaryEntry) arg0.iterator().next())
-				.getBackingMapContext().getManagerContext().getCacheService().getCluster().getLocalMember()
-				.getId();
+		final BackingMapManagerContext bmctx = ((BinaryEntry) arg0.iterator().next())
+				.getBackingMapContext().getManagerContext();
+		final int id = bmctx.getCacheService().getCluster().getLocalMember().getId();
 		if (combiningOutput)
 		{
-			this.context = new IntermediateContext<K, V>(id, output);
+			this.context = new IntermediateContext<K, V>(id, output,
+					((DistributedCacheService) CacheFactory.getCache(output).getCacheService())
+							.getOwnedPartitions(
+									bmctx.getCacheService().getCluster().getLocalMember())
+							.toArray());
 		}
 		else
 		{
@@ -85,11 +92,9 @@ public class MapperProcessor<K extends Comparable<K>, V> extends AbstractProcess
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public Object process(final Entry paramEntry)
 	{
-		context.setSourceKey((K) paramEntry.getKey());
 		mapper.map((Comparable<?>) paramEntry.getKey(), paramEntry.getValue(), context);
 		return null;
 	}

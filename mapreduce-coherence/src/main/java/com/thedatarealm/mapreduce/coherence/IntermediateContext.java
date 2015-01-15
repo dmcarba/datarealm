@@ -15,27 +15,26 @@
  */
 package com.thedatarealm.mapreduce.coherence;
 
+import com.tangosol.net.partition.SimplePartitionKey;
 
-public class IntermediateContext<K extends Comparable<K>, V> extends JobContext<K,V>
+public class IntermediateContext<K extends Comparable<K>, V> extends JobContext<K, V>
 {
-	private Comparable<?> sourceKey;
-	
-	@Override
-	public void setSourceKey(Comparable<?> sourceKey)
-	{
-		this.sourceKey = sourceKey;
-	}
+	private int[] targetPartitions;
 
-	public IntermediateContext(int memberId,String output)
+	public IntermediateContext(int memberId, String output, int[] targetPartitions)
 	{
 		super(memberId, output);
+		this.targetPartitions = targetPartitions;
 	}
-	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+
+	@SuppressWarnings(
+	{ "unchecked", "rawtypes" })
 	@Override
 	protected Object getKey(K key)
 	{
-		return new CompositeKey(key, sourceKey,	count++);
+		//RoundRobin
+		return new CompositeKey(key, SimplePartitionKey.getPartitionKey(targetPartitions[count++
+				% targetPartitions.length]), count++);
 	}
 
 }
