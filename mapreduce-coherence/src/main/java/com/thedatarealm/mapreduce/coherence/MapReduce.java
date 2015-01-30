@@ -44,7 +44,7 @@ public class MapReduce<K extends Comparable<K>, V>
 		public void map(MKI key, MVI value, Context<K, V> context);
 	}
 
-	public static interface Reducer<K, V, RKO extends Comparable<RKO>, RVO> extends Serializable, PortableObject
+	public static interface Reducer<K extends Comparable<K>, V, RKO extends Comparable<RKO>, RVO> extends Serializable, PortableObject
 	{
 		public void reduce(K key, Iterator<V> values, Context<RKO, RVO> context);
 	}

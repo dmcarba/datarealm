@@ -39,7 +39,7 @@ public class MapReduceTest implements Serializable
 	{ "How many", "different words can", "you count in", "this text", "keep the count",
 			"of each different one" };
 
-	private static final int SAMPLE_SIZE = 2;
+	private static final int SAMPLE_SIZE = 1;
 
 	private static final String[] INVERTED_SAMPLE =
 	{
@@ -97,6 +97,7 @@ public class MapReduceTest implements Serializable
 		assertEquals(getCountValue(outputCache, "count"), SAMPLE_SIZE * 2);
 		assertEquals(getCountValue(outputCache, "different"), SAMPLE_SIZE * 2);
 		assertEquals(getCountValue(outputCache, "many"), SAMPLE_SIZE);
+		assertEquals(15, outputCache.size());
 	}
 
 	@Test
@@ -110,6 +111,7 @@ public class MapReduceTest implements Serializable
 		assertEquals(getCountValue(outputCache, "count"), SAMPLE_SIZE * 2);
 		assertEquals(getCountValue(outputCache, "different"), SAMPLE_SIZE * 2);
 		assertEquals(getCountValue(outputCache, "many"), SAMPLE_SIZE);
+		assertEquals(15, outputCache.size());
 		printCache(OUTPUT);
 	}
 
@@ -229,7 +231,7 @@ public class MapReduceTest implements Serializable
 		public void map(Long key, String value, Context<String, LongPair> context)
 		{
 			Map<String, long[]> wordToFreq = new HashMap<>();
-			for (String word : value.split("[ .,]", -1))
+			for (String word : value.split("[ .,]"))
 			{
 				word = word.toLowerCase();
 				long[] l = wordToFreq.get(word);
@@ -281,7 +283,7 @@ public class MapReduceTest implements Serializable
 		@Override
 		public void map(Long key, String value, Context<String, Long> context)
 		{
-			for (String word : value.split(" ", -1))
+			for (String word : value.split(" "))
 			{
 				context.write(word, 1L);
 			}
