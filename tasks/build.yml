@@ -7,4 +7,4 @@ image_resource:
 inputs:
   - name: source-code
 run:
-  path: datarealm/tasks/build.sh
+  path: source-code/tasks/build.sh
