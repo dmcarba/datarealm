@@ -1,0 +1,19 @@
+resources:
+- name: source-code
+  type: git
+  source:
+    uri: https://github.com/dmcarba/datarealm
+    branch: master
+
+jobs:
+- name: build-and-verify
+  plan:
+  - get: source-code
+    trigger: true
+  - task: build-and-verify
+  	  params:
+        M2_SETTINGS_REPO_USERNAME: {{GREETING_MSG}}
+        M2_SETTINGS_REPO_PASSWORD: {{GREETING_MSG}}
+        M2_SETTINGS_REPO_ID: {{GREETING_MSG}}
+        M2_SETTINGS_REPO_RELEASE_URI: {{GREETING_MSG}}
+    file: source-code/tasks/build.yml
